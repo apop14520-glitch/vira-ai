@@ -134,6 +134,18 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 app.include_router(v1_router, prefix="/api/v1")
 
 
+@app.get("/", tags=["system"])
+def root() -> dict[str, str]:
+    """Provide a small orientation response for direct visits to the API port."""
+
+    return {
+        "service": "vira-api",
+        "status": "ok",
+        "health": "/health",
+        "docs": "/docs",
+    }
+
+
 @app.get("/health", response_model=HealthResponse, tags=["system"])
 def healthcheck() -> HealthResponse:
     """Report that the API process is running.

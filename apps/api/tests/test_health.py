@@ -6,6 +6,18 @@ from app.main import app
 client = TestClient(app)
 
 
+def test_root_route_orients_local_api_visits() -> None:
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "service": "vira-api",
+        "status": "ok",
+        "health": "/health",
+        "docs": "/docs",
+    }
+
+
 def test_healthcheck_returns_expected_contract() -> None:
     response = client.get("/health")
 

@@ -31,7 +31,7 @@ if errorlevel 1 (
 call :port_in_use 3000
 if errorlevel 1 (
   echo Iniciando frontend VIRA.AI na porta 3000...
-  start "VIRA.AI Web" /min "%ComSpec%" /d /c call "%ROOT%start-web.cmd"
+  start "VIRA.AI Web" /min "%ROOT%start-web.cmd"
 ) else (
   echo Frontend VIRA.AI ja esta em execucao.
 )
@@ -40,6 +40,7 @@ echo.
 echo VIRA.AI ligado.
 echo Frontend: http://127.0.0.1:3000
 echo API:      http://127.0.0.1:8000/health
+start "" "http://127.0.0.1:3000"
 exit /b 0
 
 :port_in_use

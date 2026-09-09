@@ -1,0 +1,212 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+html {
+  background: #020617;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  background: #f8fafc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #020617;
+  color: #e2e8f0;
+  font-family: Inter, "Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400;
+  font-synthesis: none;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+/*
+ * A interface usa destaque por hierarquia, não por peso máximo em todos os
+ * elementos. Esses ajustes mantêm as classes existentes compatíveis, mas
+ * evitam que títulos, botões e cartões pareçam pesados demais.
+ */
+.font-black {
+  font-weight: 700;
+}
+
+.font-bold {
+  font-weight: 600;
+}
+
+/* Densidade é uma preferência de leitura, aplicada sem alterar o conteúdo. */
+html[data-density="compact"] .density-main {
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+
+html[data-density="compact"] .density-stack > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.25rem;
+}
+
+html[data-density="compact"] .density-surface {
+  padding: 1rem !important;
+}
+
+html[data-density="compact"] .density-card {
+  padding: 0.75rem !important;
+}
+
+@media (min-width: 640px) {
+  html[data-density="compact"] .density-surface {
+    padding: 1.5rem !important;
+  }
+
+  html[data-density="compact"] .density-card {
+    padding: 1.25rem !important;
+  }
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.25);
+  color: #ecfeff;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border: 2px solid #020617;
+  border-radius: 999px;
+}
+
+/* Theme tokens override the dark-first Tailwind palette without duplicating each component. */
+html[data-theme="light"] body,
+html[data-theme="light"] .bg-slate-950 {
+  background-color: #f8fafc !important;
+}
+
+html[data-theme="light"] .bg-slate-950\/95,
+html[data-theme="light"] .bg-slate-950\/85,
+html[data-theme="light"] .bg-slate-950\/70,
+html[data-theme="light"] .bg-slate-950\/60 {
+  background-color: rgba(248, 250, 252, 0.94) !important;
+}
+
+html[data-theme="light"] .bg-slate-900,
+html[data-theme="light"] .bg-slate-900\/80,
+html[data-theme="light"] .bg-slate-900\/60,
+html[data-theme="light"] .bg-slate-900\/45,
+html[data-theme="light"] .bg-slate-900\/40,
+html[data-theme="light"] .bg-slate-900\/25 {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+}
+
+html[data-theme="light"] .border-slate-900,
+html[data-theme="light"] .border-slate-800,
+html[data-theme="light"] .border-slate-800\/80,
+html[data-theme="light"] .border-slate-700,
+html[data-theme="light"] .border-slate-700\/80 {
+  border-color: #dbe4ee !important;
+}
+
+html[data-theme="light"] .text-white,
+html[data-theme="light"] .text-slate-100 {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .text-slate-200 {
+  color: #172033 !important;
+}
+
+html[data-theme="light"] .text-slate-300 {
+  color: #1e293b !important;
+}
+
+html[data-theme="light"] .text-slate-400 {
+  color: #334155 !important;
+}
+
+html[data-theme="light"] .text-slate-500,
+html[data-theme="light"] .text-slate-600 {
+  color: #475569 !important;
+}
+
+html[data-theme="light"] .text-slate-700 {
+  color: #334155 !important;
+}
+
+/* O hover da navegação usa contraste invertido e precisa vencer os tokens de texto do tema claro. */
+html[data-theme="light"] .nav-item:hover {
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .nav-item:hover {
+  color: #020617 !important;
+}
+
+html[data-theme="light"] .text-cyan-200,
+html[data-theme="light"] .text-cyan-300 {
+  color: #0e7490 !important;
+}
+
+html[data-theme="light"] .text-emerald-300 {
+  color: #047857 !important;
+}
+
+html[data-theme="light"] .text-amber-300 {
+  color: #b45309 !important;
+}
+
+html[data-theme="light"] .text-violet-300 {
+  color: #6d28d9 !important;
+}
+
+/* Stronger dark-mode body text keeps secondary labels readable on every route. */
+html[data-theme="dark"] .text-slate-300 {
+  color: #e2e8f0 !important;
+}
+
+html[data-theme="dark"] .text-slate-400 {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .text-slate-600 {
+  color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .text-cyan-200,
+html[data-theme="dark"] .text-cyan-300 {
+  color: #67e8f9 !important;
+}
+
+html[data-theme="light"] .bg-slate-950\/60,
+html[data-theme="light"] .bg-slate-950\/70 {
+  box-shadow: 0 12px 35px rgba(15, 23, 42, 0.06);
+}
+
+html[data-theme="light"] ::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+html[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-color: #f8fafc;
+}

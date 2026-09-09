@@ -1,0 +1,19 @@
+{
+  "name": "vira-ai",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Fundação técnica do ecossistema SaaS brasileiro VIRA.AI",
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace @vira-ai/web run dev",
+    "build:web": "npm --workspace @vira-ai/web run build",
+    "test:api": "python -m pytest apps/api/tests"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
+

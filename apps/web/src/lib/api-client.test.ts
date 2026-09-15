@@ -33,6 +33,17 @@ describe("cliente same-origin", () => {
     });
   });
 
+  it("mostra mensagem de credencial inválida somente no login", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ error: { message: "detalhe interno" } }), { status: 401 }),
+    );
+
+    await expect(apiJson("/api/v1/auth/login", { method: "POST" })).rejects.toMatchObject({
+      status: 401,
+      message: "Usuário ou senha inválidos.",
+    });
+  });
+
   it("mantém o retry-after quando o backend limita tentativas", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(null, { status: 429, headers: { "Retry-After": "12" } }),

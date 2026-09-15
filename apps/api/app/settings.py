@@ -7,20 +7,26 @@ are supplied by the runtime instead of being embedded in source code.
 from functools import lru_cache
 from uuid import UUID
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import AliasChoices, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Runtime configuration with safe local-development defaults."""
 
-    environment: str = "development"
+    environment: str = Field(
+        default="development",
+        validation_alias=AliasChoices("ENVIRONMENT", "AMBIENTE"),
+    )
     log_level: str = "INFO"
     api_host: str = "127.0.0.1"
     api_port: int = 8000
     database_url: str = "sqlite:///./database/dev.db"
     ai_provider: str = "none"
-    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    cors_origins: str = Field(
+        default="http://localhost:3000,http://127.0.0.1:3000",
+        validation_alias=AliasChoices("CORS_ORIGINS", "ORIGENS_CORS"),
+    )
     development_organization_id: UUID = UUID("00000000-0000-4000-8000-000000000001")
     development_actor_id: UUID = UUID("00000000-0000-4000-8000-000000000002")
     auth_organization_id: UUID | None = None
@@ -29,8 +35,16 @@ class Settings(BaseSettings):
     api_access_token: SecretStr | None = None
     admin_access_token: SecretStr | None = None
     allow_development_auth_bypass: bool | None = None
-    admin_username: str = Field(default="admin", min_length=1, max_length=128)
-    admin_initial_password: SecretStr | None = None
+    admin_username: str = Field(
+        default="admin",
+        min_length=1,
+        max_length=128,
+        validation_alias=AliasChoices("ADMIN_USERNAME", "NOME_DE_USUÁRIO_DO_ADMINISTRADOR"),
+    )
+    admin_initial_password: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("ADMIN_INITIAL_PASSWORD", "SENHA_INICIAL_DO_ADMINISTRADOR"),
+    )
     admin_session_cookie_name: str = Field(default="vira_admin_session", min_length=1, max_length=64)
     admin_session_ttl_seconds: int = Field(default=28_800, ge=300, le=86_400)
     admin_login_rate_limit: int = Field(default=5, ge=1, le=100)

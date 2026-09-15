@@ -104,6 +104,42 @@ sem alterar o Railway atual. Consulte
 [`docs/deployment/CLOUDFLARE.md`](docs/deployment/CLOUDFLARE.md) antes de
 planejar qualquer migração.
 
+### Configuração publicada no Railway
+
+O Railway fornece variáveis por serviço. Se o projeto estiver dividido em
+`vira-api` e `vira-web`, configure cada grupo no serviço correspondente e
+aplique o deploy das alterações no painel do Railway.
+
+No serviço `vira-api`, use os nomes canônicos abaixo:
+
+```text
+ADMIN_USERNAME=admin
+ADMIN_INITIAL_PASSWORD=<senha inicial exclusiva com pelo menos 12 caracteres>
+ENVIRONMENT=production
+API_ACCESS_TOKEN=<token de integração da API>
+ADMIN_ACCESS_TOKEN=<token administrativo diferente>
+AUTH_ORGANIZATION_ID=<UUID estável da organização>
+CORS_ORIGINS=<domínio público do vira-web>
+```
+
+No serviço `vira-web`, configure apenas o destino server-side da API:
+
+```text
+API_INTERNAL_URL=<URL base do vira-api>
+```
+
+`API_INTERNAL_URL` não deve ficar no frontend como `NEXT_PUBLIC_*` e não deve
+terminar em `/login`, `/api` ou `/health`. Os tokens não são a senha do
+formulário de login. `ADMIN_INITIAL_PASSWORD` serve somente para criar a
+primeira credencial; se uma credencial já existir no banco persistido, ela não
+será substituída automaticamente.
+
+Por compatibilidade com uma configuração antiga, o backend também reconhece
+`SENHA_INICIAL_DO_ADMINISTRADOR`, `NOME_DE_USUÁRIO_DO_ADMINISTRADOR`,
+`AMBIENTE` e `ORIGENS_CORS`, mas os nomes em inglês são o contrato recomendado.
+Não coloque valores reais no repositório. O Railway permite revisar e aplicar
+as alterações de variáveis no próprio painel.
+
 ## Princípios de engenharia
 
 O projeto adota desde a fundação: LGPD, privacy by design, privacy by default, minimização de dados, limitação de finalidade, menor privilégio, configurações seguras por padrão, auditabilidade e segregação entre dados pessoais e empresariais. Secrets e chaves de API nunca devem ser armazenados no código ou versionados.

@@ -24,4 +24,20 @@ describe("contrato de build Cloudflare", () => {
 
     expect(packageJson.scripts?.["check:cloudflare"]).toBe("node scripts/check-cloudflare-artifacts.mjs");
   });
+
+  it("documenta a topologia híbrida e o rollback", () => {
+    const documentationPath = resolve(process.cwd(), "../../docs/deployment/CLOUDFLARE.md");
+    const documentation = readFileSync(documentationPath, "utf8");
+
+    for (const requiredText of [
+      "vira-ai-web",
+      "API_INTERNAL_URL",
+      "vira-api-production.up.railway.app",
+      "feat/admin-ui-cloudflare",
+      "rollback",
+      "railway.internal",
+    ]) {
+      expect(documentation).toContain(requiredText);
+    }
+  });
 });

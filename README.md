@@ -99,10 +99,24 @@ O navegador conversa com a API por um proxy same-origin em `/api/...`; a URL
 interna fica somente em `API_INTERNAL_URL` no servidor. Isso mantém o frontend
 independente do endereço local ou remoto da API.
 
-O projeto também mantém uma trilha de compatibilidade futura com Cloudflare
-sem alterar o Railway atual. Consulte
+### Topologia híbrida preparada para Cloudflare
+
+| Serviço | Onde roda | Função | URL/origem |
+| --- | --- | --- | --- |
+| `vira-ai-web` | Cloudflare Workers + OpenNext | Frontend e proxy same-origin | `API_INTERNAL_URL` server-side |
+| `vira-api` | Railway | FastAPI, autenticação, Business e integrações | `https://vira-api-production.up.railway.app` |
+| frontend de rollback | Railway | Continuidade durante a validação | `https://vira-ai-production.up.railway.app` |
+
+O Worker usa somente a variável server-side `API_INTERNAL_URL`; ela não é
+`NEXT_PUBLIC_*` e não aparece no navegador. O domínio `railway.internal` não
+deve ser usado pelo browser ou pelo Worker externo. Os scripts
+`preview`, `deploy`, `cf-typegen` e `check:cloudflare` ficam em
+`apps/web/package.json`, sem remover os comandos atuais do Railway.
+
+Consulte o guia operacional de publicação híbrida em
 [`docs/deployment/CLOUDFLARE.md`](docs/deployment/CLOUDFLARE.md) antes de
-planejar qualquer migração.
+conectar o repositório ao Cloudflare. A API e o frontend Railway continuam
+sendo o rollback até a aprovação explícita da promoção.
 
 ### Configuração publicada no Railway
 

@@ -1,82 +1,135 @@
-# Compatibilidade futura com Cloudflare
+# Publicação híbrida no Cloudflare
 
-## Decisão atual
+Este documento descreve a publicação do frontend do VIRA.AI no Cloudflare
+Workers mantendo a API e o banco no Railway. A estratégia é um preview isolado
+primeiro; o domínio principal só deve ser promovido depois da validação manual.
 
-O VIRA.AI continua sendo executado localmente e o ambiente remoto existente
-continua fora desta mudança. Nenhum arquivo de configuração do Railway foi
-criado ou alterado, nenhum deploy foi disparado e a branch principal não é
-modificada por este trabalho.
+## Topologia ativa
 
-A compatibilidade futura foi preparada por fronteiras de runtime:
+| Serviço | Plataforma | Responsabilidade | Origem inicial |
+| --- | --- | --- | --- |
+| `vira-ai-web` | Cloudflare Workers + OpenNext | Next.js, páginas e proxy same-origin | preview do Worker |
+| `vira-api` | Railway | FastAPI, autenticação, Business, Foursquare e persistência | `https://vira-api-production.up.railway.app` |
+| frontend atual | Railway | rollback operacional | `https://vira-ai-production.up.railway.app` |
 
-- o navegador chama somente rotas same-origin em `/api/...`;
-- o proxy do Next mantém `API_INTERNAL_URL` exclusivamente no servidor;
-- o FastAPI continua separado como serviço de API;
-- a persistência é acessada por uma porta, permitindo trocar SQLite por outro
-  adapter no futuro;
-- secrets continuam sendo fornecidos pelo ambiente ou por um gerenciador de
-  secrets, nunca pelo bundle do navegador;
-- as rotas do proxy usam uma allowlist explícita, evitando encaminhamento
-  arbitrário para destinos internos.
+O navegador chama apenas `/api/...` no próprio frontend. O Worker usa a
+variável server-side `API_INTERNAL_URL` para encaminhar as requisições ao
+domínio público da API Railway. Nenhum token de integração, senha, chave
+Foursquare ou valor de `API_ACCESS_TOKEN` deve entrar no bundle do navegador.
 
-## Opções de implantação futura
+## Pré-requisitos
 
-O frontend pode ser avaliado para Cloudflare Workers com OpenNext, que é o
-caminho documentado para aplicações Next.js existentes. Para projetos novos,
-a documentação atual da Cloudflare também apresenta o vinext como opção em
-beta. A escolha deve ser feita depois de validar as dependências do VIRA.AI,
-o comportamento do App Router e os limites de runtime.
+1. O código deve estar no repositório conectado ao Cloudflare, na branch
+   `feat/admin-ui-cloudflare` para o primeiro preview.
+2. A API pública precisa responder em
+   `https://vira-api-production.up.railway.app/health`.
+3. A conta do Cloudflare deve estar autenticada no painel ou no ambiente de
+   CI. A autenticação é manual; nunca coloque um token no repositório ou no
+   chat.
+4. O serviço atual do Railway deve continuar disponível para rollback.
 
-O FastAPI pode permanecer como serviço de origem no Railway ou ser avaliado
-separadamente no runtime Python da Cloudflare, que oferece suporte a ASGI.
-Essa avaliação não faz parte desta etapa e não substitui a persistência ou a
-gestão de secrets de produção.
+## Configuração do Worker
+
+O projeto já contém `apps/web/wrangler.jsonc` com o nome `vira-ai-web`, o
+artefato `.open-next/worker.js`, os assets `.open-next/assets`,
+`nodejs_compat` e observabilidade habilitada. O build usa
+`apps/web/open-next.config.ts`.
+
+No ambiente de runtime do Worker, crie uma variável secreta ou variável
+criptografada com somente esta finalidade:
+
+```text
+API_INTERNAL_URL=https://vira-api-production.up.railway.app
+```
+
+Use a URL base sem `/login`, `/api` ou `/health`. Não crie
+`NEXT_PUBLIC_API_INTERNAL_URL` e não coloque `API_ACCESS_TOKEN`,
+`ADMIN_ACCESS_TOKEN`, `ADMIN_INITIAL_PASSWORD` ou `FOURSQUARE_API_KEY` no
+Cloudflare Worker. Esses valores, quando necessários, pertencem ao serviço
+`vira-api` no Railway.
+
+Não use `vira-api.railway.internal` nessa configuração. Um domínio
+`railway.internal` é privado à rede do Railway e não é resolvível pelo
+navegador nem por um Worker Cloudflare externo. Para esta topologia híbrida,
+use o domínio público da API Railway.
+
+## Publicação pelo repositório conectado
+
+Configure o projeto do Cloudflare Workers para usar a raiz do repositório e a
+branch `feat/admin-ui-cloudflare`. O comando de build é:
+
+```text
+pnpm install --frozen-lockfile && pnpm --dir apps/web run deploy
+```
+
+O script executa, nessa ordem, o build OpenNext, a verificação de artefatos e a
+publicação no Worker. O `check:cloudflare` interrompe a publicação se
+`.open-next/worker.js` ou `.open-next/assets` não existirem ou se arquivos
+textuais emitidos contiverem nomes/valores com formato de credencial.
+
+Para preview local ou validação em CI, use:
+
+```text
+pnpm install --frozen-lockfile
+pnpm --dir apps/web run typecheck
+pnpm --dir apps/web run build
+pnpm --dir apps/web exec opennextjs-cloudflare build
+pnpm --dir apps/web run check:cloudflare
+pnpm --dir apps/web exec wrangler deploy --config wrangler.jsonc --dry-run
+```
+
+O OpenNext informa que o suporte nativo no Windows é incompleto. Se o build
+falhar apenas por limitação do Windows/esbuild, execute esses passos no CI
+Linux, no WSL ou no próprio ambiente de build do Cloudflare; não remova a
+checagem de artefatos para contornar o erro.
+
+## Roteiro de validação do preview
+
+Depois que o Cloudflare fornecer uma URL de preview, valide nesta ordem:
+
+1. `GET /login` exibe a tela de acesso.
+2. `GET /api/health` retorna o healthcheck da API Railway.
+3. Uma senha incorreta mostra apenas `Usuário ou senha inválidos.` e não cria
+   sessão.
+4. Um login válido cria o cookie HttpOnly e abre `/business`.
+5. O acompanhamento, a alteração de estágio, a exclusão de empresas e a
+   busca Foursquare funcionam por caminhos same-origin `/api/...`.
+6. O logout encerra a sessão; a próxima rota protegida volta a exigir login.
+7. O código-fonte do navegador e os assets públicos não contêm a origem da
+   API server-side, tokens, senha ou chave Foursquare.
+8. O Railway continua respondendo durante todos os testes.
+
+Se a API usar uma lista de CORS para alguma chamada direta adicional, inclua a
+origem pública ou de preview do frontend somente no serviço `vira-api`; o
+fluxo normal deve continuar passando pelo proxy same-origin.
+
+## Promoção e rollback
+
+Não troque o domínio principal na primeira publicação. Mantenha o frontend
+Railway disponível até concluir login, cookie, Business, Foursquare e
+rollback.
+
+Em caso de falha:
+
+1. pare ou remova a rota/domínio do preview Cloudflare;
+2. mantenha `https://vira-ai-production.up.railway.app` como frontend ativo;
+3. preserve o serviço `vira-api`, o banco e o volume no Railway;
+4. corrija a branch e gere outro preview antes de tentar novamente.
+
+Esse rollback não exige apagar banco, recriar volume, alterar a branch
+principal ou rotacionar automaticamente qualquer segredo. A promoção do
+Cloudflare para o domínio principal requer aprovação explícita depois dos
+testes.
+
+## Próxima etapa fora deste escopo
+
+Mover o FastAPI para Python Workers ou trocar SQLite por uma persistência
+distribuída exige uma avaliação separada de ASGI, banco, sessões, auditoria,
+rate limit e armazenamento de segredos. A compatibilidade Python da Cloudflare
+é uma possibilidade futura, não parte desta publicação híbrida.
 
 Referências oficiais:
 
+- [OpenNext para aplicações Next.js existentes](https://developers.cloudflare.com/workers/framework-guides/web-apps/opennext/)
 - [Next.js na Cloudflare](https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/)
-- [OpenNext na Cloudflare](https://developers.cloudflare.com/workers/framework-guides/web-apps/opennext/)
 - [FastAPI no runtime Python da Cloudflare](https://developers.cloudflare.com/workers/languages/python/packages/fastapi/)
-
-## Contrato de configuração
-
-No frontend, a variável aceita é:
-
-```text
-API_INTERNAL_URL=https://origem-privada-da-api.example
-```
-
-Ela deve ser configurada como variável server-side/secret no ambiente de
-execução. Não deve ser renomeada para `NEXT_PUBLIC_API_INTERNAL_URL`, nem
-exposta em componentes client-side.
-
-Quando o frontend e a API forem serviços separados no Railway, essa variável
-fica somente no serviço web. Ela deve apontar para a URL base do serviço da
-API, sem acrescentar `/login`, `/api` ou `/health`. O serviço da API recebe as
-variáveis de identidade e os tokens de runtime; ele não precisa receber
-`API_INTERNAL_URL` para atender às requisições.
-
-Para a primeira publicação, os nomes canônicos recomendados são
-`ADMIN_USERNAME`, `ADMIN_INITIAL_PASSWORD`, `ENVIRONMENT`, `CORS_ORIGINS`,
-`API_ACCESS_TOKEN`, `ADMIN_ACCESS_TOKEN` e `AUTH_ORGANIZATION_ID`. A senha
-inicial é usada apenas quando não existe uma credencial persistida; alterar a
-variável depois não redefine a senha existente.
-
-No ambiente local, o valor padrão aponta para `http://127.0.0.1:8000`. No
-Railway, a configuração existente deve continuar sendo administrada pelo
-serviço correspondente. Em Cloudflare, o mesmo contrato poderá ser mapeado
-para a variável ou binding equivalente da plataforma escolhida.
-
-## Checklist antes de migrar
-
-1. Escolher OpenNext ou vinext com base em uma matriz de compatibilidade
-   testada, sem substituir o build atual de forma silenciosa.
-2. Manter a API e o frontend com origens e healthchecks observáveis.
-3. Substituir SQLite por um adapter de produção; o arquivo local não pode ser
-   usado como banco de uma implantação distribuída.
-4. Configurar secrets somente no ambiente de execução e rotacioná-los antes
-   da publicação.
-5. Validar cookies HttpOnly, CORS, rate limit, auditoria e logs sem dados
-   pessoais no novo runtime.
-6. Fazer a migração por ambiente separado, preservando o Railway como origem
-   de rollback até a confirmação dos testes.

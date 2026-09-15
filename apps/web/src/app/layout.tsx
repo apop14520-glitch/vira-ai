@@ -23,16 +23,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               const savedTheme = localStorage.getItem("vira-theme");
               const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
               document.documentElement.dataset.theme = savedTheme ?? (prefersDark ? "dark" : "light");
-              const savedDensity = localStorage.getItem("vira-density");
-              document.documentElement.dataset.density = savedDensity === "compacta" ? "compact" : "comfortable";
             } catch {
               document.documentElement.dataset.theme = "dark";
-              document.documentElement.dataset.density = "comfortable";
             }
           })();`}
         </Script>
       </head>
-      <body className="bg-slate-950 text-slate-100 antialiased">{children}</body>
+      <body className="min-h-screen bg-slate-950 text-slate-100 antialiased">{children}</body>
     </html>
   );
 }

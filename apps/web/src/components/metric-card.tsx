@@ -9,7 +9,7 @@ const toneClasses: Record<ModuleTone, string> = {
 
 export function MetricCard({ label, value, detail, tone }: { label: string; value: string; detail: string; tone: ModuleTone }) {
   return (
-    <div className={`density-card rounded-2xl border p-3 sm:p-5 ${toneClasses[tone]}`}>
+    <div className={`rounded-2xl border p-3 sm:p-5 ${toneClasses[tone]}`}>
       <p className="text-[11px] font-medium leading-4 text-slate-400 sm:text-xs">{label}</p>
       <div className="mt-3 flex items-end justify-between gap-2 sm:mt-4 sm:gap-3">
         <p className="text-2xl font-black tracking-tight text-white sm:text-3xl">{value}</p>

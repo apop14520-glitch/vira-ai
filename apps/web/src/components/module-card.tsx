@@ -11,7 +11,7 @@ const toneClasses = {
 
 export function ModuleCard({ module }: { module: ProductModule }) {
   return (
-    <Link href={`/${module.slug}`} className="density-card group rounded-2xl border border-slate-800 bg-slate-900/45 p-4 transition hover:-translate-y-0.5 hover:border-slate-700 hover:bg-slate-900/80 hover:shadow-xl hover:shadow-slate-950/40 sm:p-5">
+    <Link href={`/${module.slug}`} className="group rounded-2xl border border-slate-800 bg-slate-900/45 p-4 transition hover:-translate-y-0.5 hover:border-slate-700 hover:bg-slate-900/80 hover:shadow-xl hover:shadow-slate-950/40 sm:p-5">
       <div className="flex items-start justify-between gap-4">
         <span className={`flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-bold ring-1 ${toneClasses[module.tone]}`}>{module.symbol}</span>
         <span className="rounded-full border border-slate-700/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Preparado</span>

@@ -14,6 +14,17 @@ Estabelecer uma fundação modular para o VIRA.AI, reduzindo acoplamento entre p
 - `database`: decisões e artefatos de persistência.
 - `docs`: documentação normativa e decisões arquiteturais.
 
+## Portabilidade de runtime
+
+O frontend mantém as chamadas externas atrás de um proxy same-origin em
+`apps/web/src/app/api/[...path]/route.ts`. A API interna não é exposta no
+bundle do navegador, o que mantém o contrato compatível com uma futura camada
+de edge sem acoplar o desenvolvimento local a um vendor.
+
+O Railway permanece o ambiente remoto atual. A compatibilidade com Cloudflare
+é documentada em [`docs/deployment/CLOUDFLARE.md`](../deployment/CLOUDFLARE.md),
+mas nenhuma migração ou configuração de deploy é ativada nesta etapa.
+
 ## Fronteiras
 
 Fluxo esperado:
@@ -31,5 +42,8 @@ O ambiente local usa SQLite por meio de uma porta de banco. A URL é configuráv
 
 ## Estado da fundação
 
-Não existem autenticação, autorização de usuário, scraping, coleta de dados pessoais, integrações pagas ou persistência de domínio. O endpoint `/health` confirma somente que o processo da API está ativo.
-
+O Business possui uma fronteira inicial de autenticação e autorização: principal
+local restrito ao desenvolvimento loopback e bearer tokens obrigatórios em
+ambientes não locais. Ainda não existem scraping, coleta de dados pessoais,
+integrações pagas ou persistência de domínio além do pipeline local. O endpoint
+`/health` confirma somente que o processo da API está ativo.

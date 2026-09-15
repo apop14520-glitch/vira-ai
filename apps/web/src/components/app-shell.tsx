@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { AuthGate } from "@/components/auth-gate";
 import { PreferencesMenu } from "@/components/preferences-menu";
 
 const navigation = [
@@ -35,7 +36,8 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
   }, [mobileMenuOpen]);
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <AuthGate>
+      <div className="min-h-screen bg-slate-950">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-slate-800/80 bg-slate-950/95 px-4 py-5 lg:flex">
         <Brand />
         <div className="mt-10 px-3 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Workspace</div>
@@ -112,9 +114,10 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
           </aside>
         </>}
 
-        <main className="density-main mx-auto max-w-[1440px] px-4 py-7 sm:px-6 sm:py-10 lg:px-10">{children}</main>
+        <main className="mx-auto max-w-[1440px] px-4 py-7 sm:px-6 sm:py-10 lg:px-10">{children}</main>
       </div>
-    </div>
+      </div>
+    </AuthGate>
   );
 }
 

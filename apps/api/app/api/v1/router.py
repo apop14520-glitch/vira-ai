@@ -1,9 +1,11 @@
 from fastapi import APIRouter
 
 from app.modules.business.router import router as business_router
+from app.modules.identity.router import router as identity_router
 
 router = APIRouter()
 router.include_router(business_router, prefix="/business", tags=["business"])
+router.include_router(identity_router, prefix="/auth", tags=["identity"])
 
 
 @router.get("/", tags=["system"])

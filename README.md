@@ -11,13 +11,17 @@ Fundação técnica de um ecossistema brasileiro de software SaaS, organizado co
 - Interfaces de providers de IA preparadas para OpenAI, Anthropic, xAI e Ollama, sem clientes ou chamadas de API.
 - Documentação inicial de arquitetura, privacidade, segurança e fontes de dados.
 - Healthcheck em `GET /health`.
+- Acesso administrativo local por sessão HttpOnly, com login em `/login` e
+  troca de senha no menu de segurança.
 - Pipeline local de empresas no VIRA Business, com auditoria e pesquisa
   opcional de estabelecimentos pela Foursquare Places, limitada a 20 resultados.
 
 ## Fora do escopo desta fundação
 
-Não há scraping, coleta de dados pessoais, autenticação, integrações de IA,
-importação de contatos ou armazenamento persistente de chaves da Foursquare.
+Não há scraping, coleta de dados pessoais, integrações de IA, importação de
+contatos ou armazenamento persistente de chaves da Foursquare. A API já possui
+uma fronteira inicial de autenticação: o desenvolvimento usa um principal
+local limitado ao loopback; ambientes não locais exigem tokens de runtime.
 O primeiro fluxo de Business usa dados empresariais mínimos e uma busca externa
 explicitamente acionada pelo operador.
 
@@ -54,6 +58,18 @@ O endpoint ficará disponível em `http://127.0.0.1:8000/health`.
 
 A API versionada está reservada em `http://127.0.0.1:8000/api/v1/`.
 
+### Primeiro acesso administrativo local
+
+Antes de iniciar a API pela primeira vez, abra `apps/api/.env` e informe uma
+senha inicial exclusiva em `ADMIN_INITIAL_PASSWORD`. A senha é usada somente
+para criar a credencial local; ela não é versionada, não aparece nos logs e
+não substitui uma senha já persistida.
+
+Depois de iniciar a API e o frontend, acesse `http://localhost:3000/login`,
+entre com o usuário definido em `ADMIN_USERNAME` e troque a senha no menu
+superior, em `Configurações` → `Segurança`. Se a base local já tiver uma
+credencial criada, a variável de senha inicial não será reaplicada.
+
 ### Sistema web inicial
 
 O painel web possui as seguintes áreas navegáveis:
@@ -65,8 +81,8 @@ O painel web possui as seguintes áreas navegáveis:
 - `/concursos`: VIRA Concursos.
 
 O VIRA Business é o primeiro fluxo operacional. As demais áreas continuam como
-shell e estados de módulo; autenticação, cobrança, scraping e processamento de
-dados pessoais permanecem desativados.
+shell e estados de módulo; cobrança, scraping e processamento de dados pessoais
+permanecem desativados.
 
 ### Frontend
 
@@ -78,6 +94,15 @@ npm run dev:web
 O frontend ficará disponível em `http://localhost:3000`.
 
 No Windows, também é possível usar os atalhos `setup-web.cmd` e `start-web.cmd`. Eles localizam automaticamente `pnpm` ou `npm`; isso evita depender de `pnpm` estar previamente configurado no PATH.
+
+O navegador conversa com a API por um proxy same-origin em `/api/...`; a URL
+interna fica somente em `API_INTERNAL_URL` no servidor. Isso mantém o frontend
+independente do endereço local ou remoto da API.
+
+O projeto também mantém uma trilha de compatibilidade futura com Cloudflare
+sem alterar o Railway atual. Consulte
+[`docs/deployment/CLOUDFLARE.md`](docs/deployment/CLOUDFLARE.md) antes de
+planejar qualquer migração.
 
 ## Princípios de engenharia
 

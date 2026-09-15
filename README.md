@@ -11,16 +11,17 @@ Fundação técnica de um ecossistema brasileiro de software SaaS, organizado co
 - Interfaces de providers de IA preparadas para OpenAI, Anthropic, xAI e Ollama, sem clientes ou chamadas de API.
 - Documentação inicial de arquitetura, privacidade, segurança e fontes de dados.
 - Healthcheck em `GET /health`.
+- Acesso administrativo local por sessão HttpOnly, com login em `/login` e
+  troca de senha no menu de segurança.
 - Pipeline local de empresas no VIRA Business, com auditoria e pesquisa
   opcional de estabelecimentos pela Foursquare Places, limitada a 20 resultados.
 
 ## Fora do escopo desta fundação
 
 Não há scraping, coleta de dados pessoais, integrações de IA, importação de
-contatos ou armazenamento persistente de chaves da Foursquare. Em ambientes
-hospedados, os endpoints de produto ficam bloqueados sem `API_ACCESS_TOKEN` e o
-frontend exige uma sessão administrativa configurada com `ADMIN_USERNAME`,
-`ADMIN_PASSWORD_HASH` e `AUTH_SECRET`.
+contatos ou armazenamento persistente de chaves da Foursquare. A API já possui
+uma fronteira inicial de autenticação: o desenvolvimento usa um principal
+local limitado ao loopback; ambientes não locais exigem tokens de runtime.
 O primeiro fluxo de Business usa dados empresariais mínimos e uma busca externa
 explicitamente acionada pelo operador.
 
@@ -53,14 +54,21 @@ Copy-Item ..\..\.env.example .env
 uvicorn app.main:app --reload
 ```
 
-O `.env.example` ativa `ALLOW_INSECURE_LOCAL_API=true` apenas para o fluxo
-local em loopback. Em qualquer ambiente hospedado, mantenha essa opção ausente
-e configure `ENVIRONMENT=production`, `CORS_ORIGINS` com origens HTTPS e
-`API_ACCESS_TOKEN` no gerenciador de secrets do provedor.
-
 O endpoint ficará disponível em `http://127.0.0.1:8000/health`.
 
 A API versionada está reservada em `http://127.0.0.1:8000/api/v1/`.
+
+### Primeiro acesso administrativo local
+
+Antes de iniciar a API pela primeira vez, abra `apps/api/.env` e informe uma
+senha inicial exclusiva em `ADMIN_INITIAL_PASSWORD`. A senha é usada somente
+para criar a credencial local; ela não é versionada, não aparece nos logs e
+não substitui uma senha já persistida.
+
+Depois de iniciar a API e o frontend, acesse `http://localhost:3000/login`,
+entre com o usuário definido em `ADMIN_USERNAME` e troque a senha no menu
+superior, em `Configurações` → `Segurança`. Se a base local já tiver uma
+credencial criada, a variável de senha inicial não será reaplicada.
 
 ### Sistema web inicial
 
@@ -85,23 +93,66 @@ npm run dev:web
 
 O frontend ficará disponível em `http://localhost:3000`.
 
-### Acesso administrativo hospedado
+No Windows, também é possível usar os atalhos `setup-web.cmd` e `start-web.cmd`. Eles localizam automaticamente `pnpm` ou `npm`; isso evita depender de `pnpm` estar previamente configurado no PATH.
 
-O frontend exige login em `/login` antes de abrir qualquer módulo. Configure no
-Railway as variáveis privadas `ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH` e
-`AUTH_SECRET`. Para gerar um hash localmente sem expor a senha no código:
+O navegador conversa com a API por um proxy same-origin em `/api/...`; a URL
+interna fica somente em `API_INTERNAL_URL` no servidor. Isso mantém o frontend
+independente do endereço local ou remoto da API.
 
-```powershell
-$env:VIRA_PASSWORD = Read-Host "Senha forte (mínimo 12 caracteres)"
-node --experimental-strip-types -e "import('./apps/web/src/lib/auth-core.ts').then(async ({createPasswordHash}) => console.log(await createPasswordHash(process.env.VIRA_PASSWORD)))"
-Remove-Item Env:VIRA_PASSWORD
+### Topologia híbrida preparada para Cloudflare
+
+| Serviço | Onde roda | Função | URL/origem |
+| --- | --- | --- | --- |
+| `vira-ai-web` | Cloudflare Workers + OpenNext | Frontend e proxy same-origin | `API_INTERNAL_URL` server-side |
+| `vira-api` | Railway | FastAPI, autenticação, Business e integrações | `https://vira-api-production.up.railway.app` |
+| frontend de rollback | Railway | Continuidade durante a validação | `https://vira-ai-production.up.railway.app` |
+
+O Worker usa somente a variável server-side `API_INTERNAL_URL`; ela não é
+`NEXT_PUBLIC_*` e não aparece no navegador. O domínio `railway.internal` não
+deve ser usado pelo browser ou pelo Worker externo. Os scripts
+`preview`, `deploy`, `cf-typegen` e `check:cloudflare` ficam em
+`apps/web/package.json`, sem remover os comandos atuais do Railway.
+
+Consulte o guia operacional de publicação híbrida em
+[`docs/deployment/CLOUDFLARE.md`](docs/deployment/CLOUDFLARE.md) antes de
+conectar o repositório ao Cloudflare. A API e o frontend Railway continuam
+sendo o rollback até a aprovação explícita da promoção.
+
+### Configuração publicada no Railway
+
+O Railway fornece variáveis por serviço. Se o projeto estiver dividido em
+`vira-api` e `vira-web`, configure cada grupo no serviço correspondente e
+aplique o deploy das alterações no painel do Railway.
+
+No serviço `vira-api`, use os nomes canônicos abaixo:
+
+```text
+ADMIN_USERNAME=admin
+ADMIN_INITIAL_PASSWORD=<senha inicial exclusiva com pelo menos 12 caracteres>
+ENVIRONMENT=production
+API_ACCESS_TOKEN=<token de integração da API>
+ADMIN_ACCESS_TOKEN=<token administrativo diferente>
+AUTH_ORGANIZATION_ID=<UUID estável da organização>
+CORS_ORIGINS=<domínio público do vira-web>
 ```
 
-Use uma senha com pelo menos 12 caracteres e um `AUTH_SECRET` aleatório com pelo
-menos 32 caracteres. O cookie de sessão expira em oito horas e o login limita
-tentativas repetidas.
+No serviço `vira-web`, configure apenas o destino server-side da API:
 
-No Windows, também é possível usar os atalhos `setup-web.cmd` e `start-web.cmd`. Eles localizam automaticamente `pnpm` ou `npm`; isso evita depender de `pnpm` estar previamente configurado no PATH.
+```text
+API_INTERNAL_URL=<URL base do vira-api>
+```
+
+`API_INTERNAL_URL` não deve ficar no frontend como `NEXT_PUBLIC_*` e não deve
+terminar em `/login`, `/api` ou `/health`. Os tokens não são a senha do
+formulário de login. `ADMIN_INITIAL_PASSWORD` serve somente para criar a
+primeira credencial; se uma credencial já existir no banco persistido, ela não
+será substituída automaticamente.
+
+Por compatibilidade com uma configuração antiga, o backend também reconhece
+`SENHA_INICIAL_DO_ADMINISTRADOR`, `NOME_DE_USUÁRIO_DO_ADMINISTRADOR`,
+`AMBIENTE` e `ORIGENS_CORS`, mas os nomes em inglês são o contrato recomendado.
+Não coloque valores reais no repositório. O Railway permite revisar e aplicar
+as alterações de variáveis no próprio painel.
 
 ## Princípios de engenharia
 

@@ -15,7 +15,10 @@ from app.api.v1.router import router as v1_router
 from app.db.factory import create_database
 from app.modules.business.repository import SQLiteCompanyLeadRepository
 from app.modules.business.places import FoursquarePlacesService
+from app.modules.identity.repository import SQLiteIdentityRepository
 from app.observability.logging import configure_logging
+from app.security.rate_limit import SlidingWindowRateLimiter
+from app.security.sessions import AdminSessionService
 from app.settings import get_settings
 
 
@@ -48,9 +51,28 @@ async def lifespan(application: FastAPI):
     database.initialize()
     company_leads = SQLiteCompanyLeadRepository(database)
     company_leads.initialize_schema()
+    identity = SQLiteIdentityRepository(database)
+    identity.initialize_schema()
+    admin_sessions = AdminSessionService(
+        credential_repository=identity,
+        session_repository=identity,
+        settings=settings,
+    )
+    admin_sessions.ensure_initial_credential()
+    application.state.settings = settings
     application.state.company_leads = company_leads
+    application.state.identity = identity
+    application.state.admin_sessions = admin_sessions
     application.state.foursquare_places = FoursquarePlacesService(
         settings.foursquare_api_key.get_secret_value() if settings.foursquare_api_key else None
+    )
+    application.state.foursquare_rate_limiter = SlidingWindowRateLimiter(
+        settings.foursquare_rate_limit,
+        settings.foursquare_rate_limit_window_seconds,
+    )
+    application.state.identity_rate_limiter = SlidingWindowRateLimiter(
+        settings.admin_login_rate_limit,
+        settings.admin_login_rate_window_seconds,
     )
     yield
     database.close()
@@ -66,9 +88,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()],
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "X-Request-ID"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
 )
 
 
@@ -121,6 +143,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     detail = exc.detail if isinstance(exc.detail, str) else "A requisição não pôde ser processada."
     return JSONResponse(
         status_code=exc.status_code,
+        headers=exc.headers,
         content={
             "error": {
                 "code": "HTTP_ERROR",

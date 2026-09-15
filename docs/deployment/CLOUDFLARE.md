@@ -1,0 +1,135 @@
+# Publicação híbrida no Cloudflare
+
+Este documento descreve a publicação do frontend do VIRA.AI no Cloudflare
+Workers mantendo a API e o banco no Railway. A estratégia é um preview isolado
+primeiro; o domínio principal só deve ser promovido depois da validação manual.
+
+## Topologia ativa
+
+| Serviço | Plataforma | Responsabilidade | Origem inicial |
+| --- | --- | --- | --- |
+| `vira-ai-web` | Cloudflare Workers + OpenNext | Next.js, páginas e proxy same-origin | preview do Worker |
+| `vira-api` | Railway | FastAPI, autenticação, Business, Foursquare e persistência | `https://vira-api-production.up.railway.app` |
+| frontend atual | Railway | rollback operacional | `https://vira-ai-production.up.railway.app` |
+
+O navegador chama apenas `/api/...` no próprio frontend. O Worker usa a
+variável server-side `API_INTERNAL_URL` para encaminhar as requisições ao
+domínio público da API Railway. Nenhum token de integração, senha, chave
+Foursquare ou valor de `API_ACCESS_TOKEN` deve entrar no bundle do navegador.
+
+## Pré-requisitos
+
+1. O código deve estar no repositório conectado ao Cloudflare, na branch
+   `feat/admin-ui-cloudflare` para o primeiro preview.
+2. A API pública precisa responder em
+   `https://vira-api-production.up.railway.app/health`.
+3. A conta do Cloudflare deve estar autenticada no painel ou no ambiente de
+   CI. A autenticação é manual; nunca coloque um token no repositório ou no
+   chat.
+4. O serviço atual do Railway deve continuar disponível para rollback.
+
+## Configuração do Worker
+
+O projeto já contém `apps/web/wrangler.jsonc` com o nome `vira-ai-web`, o
+artefato `.open-next/worker.js`, os assets `.open-next/assets`,
+`nodejs_compat` e observabilidade habilitada. O build usa
+`apps/web/open-next.config.ts`.
+
+No ambiente de runtime do Worker, crie uma variável secreta ou variável
+criptografada com somente esta finalidade:
+
+```text
+API_INTERNAL_URL=https://vira-api-production.up.railway.app
+```
+
+Use a URL base sem `/login`, `/api` ou `/health`. Não crie
+`NEXT_PUBLIC_API_INTERNAL_URL` e não coloque `API_ACCESS_TOKEN`,
+`ADMIN_ACCESS_TOKEN`, `ADMIN_INITIAL_PASSWORD` ou `FOURSQUARE_API_KEY` no
+Cloudflare Worker. Esses valores, quando necessários, pertencem ao serviço
+`vira-api` no Railway.
+
+Não use `vira-api.railway.internal` nessa configuração. Um domínio
+`railway.internal` é privado à rede do Railway e não é resolvível pelo
+navegador nem por um Worker Cloudflare externo. Para esta topologia híbrida,
+use o domínio público da API Railway.
+
+## Publicação pelo repositório conectado
+
+Configure o projeto do Cloudflare Workers para usar a raiz do repositório e a
+branch `feat/admin-ui-cloudflare`. O comando de build é:
+
+```text
+pnpm install --frozen-lockfile && pnpm --dir apps/web run deploy
+```
+
+O script executa, nessa ordem, o build OpenNext, a verificação de artefatos e a
+publicação no Worker. O `check:cloudflare` interrompe a publicação se
+`.open-next/worker.js` ou `.open-next/assets` não existirem ou se arquivos
+textuais emitidos contiverem nomes/valores com formato de credencial.
+
+Para preview local ou validação em CI, use:
+
+```text
+pnpm install --frozen-lockfile
+pnpm --dir apps/web run typecheck
+pnpm --dir apps/web run build
+pnpm --dir apps/web exec opennextjs-cloudflare build
+pnpm --dir apps/web run check:cloudflare
+pnpm --dir apps/web exec wrangler deploy --config wrangler.jsonc --dry-run
+```
+
+O OpenNext informa que o suporte nativo no Windows é incompleto. Se o build
+falhar apenas por limitação do Windows/esbuild, execute esses passos no CI
+Linux, no WSL ou no próprio ambiente de build do Cloudflare; não remova a
+checagem de artefatos para contornar o erro.
+
+## Roteiro de validação do preview
+
+Depois que o Cloudflare fornecer uma URL de preview, valide nesta ordem:
+
+1. `GET /login` exibe a tela de acesso.
+2. `GET /api/health` retorna o healthcheck da API Railway.
+3. Uma senha incorreta mostra apenas `Usuário ou senha inválidos.` e não cria
+   sessão.
+4. Um login válido cria o cookie HttpOnly e abre `/business`.
+5. O acompanhamento, a alteração de estágio, a exclusão de empresas e a
+   busca Foursquare funcionam por caminhos same-origin `/api/...`.
+6. O logout encerra a sessão; a próxima rota protegida volta a exigir login.
+7. O código-fonte do navegador e os assets públicos não contêm a origem da
+   API server-side, tokens, senha ou chave Foursquare.
+8. O Railway continua respondendo durante todos os testes.
+
+Se a API usar uma lista de CORS para alguma chamada direta adicional, inclua a
+origem pública ou de preview do frontend somente no serviço `vira-api`; o
+fluxo normal deve continuar passando pelo proxy same-origin.
+
+## Promoção e rollback
+
+Não troque o domínio principal na primeira publicação. Mantenha o frontend
+Railway disponível até concluir login, cookie, Business, Foursquare e
+rollback.
+
+Em caso de falha:
+
+1. pare ou remova a rota/domínio do preview Cloudflare;
+2. mantenha `https://vira-ai-production.up.railway.app` como frontend ativo;
+3. preserve o serviço `vira-api`, o banco e o volume no Railway;
+4. corrija a branch e gere outro preview antes de tentar novamente.
+
+Esse rollback não exige apagar banco, recriar volume, alterar a branch
+principal ou rotacionar automaticamente qualquer segredo. A promoção do
+Cloudflare para o domínio principal requer aprovação explícita depois dos
+testes.
+
+## Próxima etapa fora deste escopo
+
+Mover o FastAPI para Python Workers ou trocar SQLite por uma persistência
+distribuída exige uma avaliação separada de ASGI, banco, sessões, auditoria,
+rate limit e armazenamento de segredos. A compatibilidade Python da Cloudflare
+é uma possibilidade futura, não parte desta publicação híbrida.
+
+Referências oficiais:
+
+- [OpenNext para aplicações Next.js existentes](https://developers.cloudflare.com/workers/framework-guides/web-apps/opennext/)
+- [Next.js na Cloudflare](https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/)
+- [FastAPI no runtime Python da Cloudflare](https://developers.cloudflare.com/workers/languages/python/packages/fastapi/)

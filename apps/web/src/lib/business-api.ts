@@ -27,21 +27,10 @@ export type CompanyLeadInput = Pick<CompanyLead, "company_name" | "segment" | "c
 export type PlaceResult = { place_id: string; name: string; segment: string; city: string; state: string; website: string | null; address: string | null; website_status: "informado" | "nao_verificado" };
 export type FoursquareStatus = { configured: boolean; mode: string; message: string };
 
-// Browser requests stay on the VIRA.AI origin. The server-side proxy adds the
-// private API credential and reaches the API over the Railway private network.
-const apiBaseUrl = "/api/business";
+import { apiJson } from "@/lib/api-client";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
-  });
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
-    throw new Error(payload?.error?.message ?? "Não foi possível concluir esta operação.");
-  }
-  if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
+  return apiJson<T>(`/api/v1/business${path}`, init);
 }
 
 export const businessApi = {

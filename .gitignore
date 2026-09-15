@@ -30,6 +30,9 @@ out/
 dist/
 coverage/
 *.tsbuildinfo
+.open-next/
+apps/web/.dev.vars
+apps/web/cloudflare-env.d.ts
 
 # IDE and OS
 .idea/

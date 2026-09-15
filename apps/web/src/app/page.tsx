@@ -8,8 +8,8 @@ import Link from "next/link";
 export default function Home() {
   return (
     <AppShell>
-      <div className="density-stack space-y-6 sm:space-y-8">
-        <section className="density-surface relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-cyan-950/10 sm:p-8">
+      <div className="space-y-6 sm:space-y-8">
+        <section className="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-cyan-950/10 sm:p-8">
           <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl" />
           <div className="relative max-w-3xl">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1.5 text-[11px] font-bold text-cyan-200 sm:mb-5 sm:text-xs">
@@ -55,13 +55,13 @@ export default function Home() {
           <SystemStatus />
         </section>
 
-        <section className="density-surface rounded-2xl border border-slate-800/80 bg-slate-900/40 p-5 sm:p-6">
+        <section className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-5 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Próxima camada</p>
               <h2 className="mt-2 text-lg font-semibold text-white">A fundação está pronta para a primeira feature</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                As telas atuais delimitam o produto sem ativar autenticação, cobrança, scraping ou tratamento de dados pessoais. Cada módulo pode evoluir dentro do seu próprio boundary.
+                As telas atuais delimitam o produto sem ativar autenticação, cobrança, scraping ou tratamento de dados pessoais. Cada módulo pode evoluir dentro da sua própria área reservada.
               </p>
             </div>
             <div className="shrink-0 rounded-xl border border-slate-700 bg-slate-950/60 px-4 py-3 text-sm text-slate-300">

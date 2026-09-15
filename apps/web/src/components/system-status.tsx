@@ -10,10 +10,9 @@ export function SystemStatus() {
 
   useEffect(() => {
     const controller = new AbortController();
-
-    fetch("/api/health", { signal: controller.signal, cache: "no-store" })
+    fetch("/api/health", { signal: controller.signal, cache: "no-store", credentials: "include" })
       .then(async (response) => {
-        if (!response.ok) throw new Error("Healthcheck failed");
+        if (!response.ok) throw new Error("Falha na verificação da API");
         const payload = (await response.json()) as { service?: string; status?: string };
         setService(payload.service ?? "vira-api");
         setState(payload.status === "ok" ? "online" : "offline");
@@ -24,13 +23,13 @@ export function SystemStatus() {
   }, []);
 
   const copy = {
-    checking: { label: "Verificando", detail: "Consultando a API", dot: "bg-amber-300 animate-pulse" },
-    online: { label: "Online", detail: "Healthcheck respondendo", dot: "bg-emerald-300" },
-    offline: { label: "Offline", detail: "A API não respondeu", dot: "bg-slate-500" },
+    checking: { label: "Verificando", detail: "Consultando a API local", dot: "bg-amber-300 animate-pulse" },
+    online: { label: "Disponível", detail: "Verificação respondendo", dot: "bg-emerald-300" },
+    offline: { label: "Indisponível", detail: "Inicie a API local para conectar", dot: "bg-slate-500" },
   }[state];
 
   return (
-    <aside className="density-card h-fit rounded-2xl border border-slate-800 bg-slate-900/45 p-4 xl:mt-10 sm:p-5">
+    <aside className="h-fit rounded-2xl border border-slate-800 bg-slate-900/45 p-4 xl:mt-10 sm:p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Sistema</p>
@@ -48,7 +47,7 @@ export function SystemStatus() {
       <div className="mt-5 space-y-3 text-xs">
         <StatusRow label="API versionada" value="/api/v1/" />
         <StatusRow label="Banco local" value="SQLite" />
-        <StatusRow label="Providers de IA" value="Preparados" />
+        <StatusRow label="Provedores de IA" value="Preparados" />
       </div>
     </aside>
   );

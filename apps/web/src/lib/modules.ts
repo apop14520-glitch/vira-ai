@@ -18,7 +18,7 @@ export const productModules: ProductModule[] = [
     description: "O espaço para organizar inteligência comercial e dados empresariais com clareza.",
     symbol: "B",
     tone: "cyan",
-    capabilities: ["Organizações", "Dados empresariais", "Usage"],
+    capabilities: ["Organizações", "Dados empresariais", "Uso"],
   },
   {
     slug: "sites",
@@ -36,7 +36,7 @@ export const productModules: ProductModule[] = [
     description: "O ambiente para construir fluxos e agentes sobre o AI Gateway do VIRA.AI.",
     symbol: "✦",
     tone: "violet",
-    capabilities: ["Agents", "Workflows", "Providers"],
+    capabilities: ["Agentes", "Fluxos", "Provedores"],
   },
   {
     slug: "concursos",
@@ -48,4 +48,3 @@ export const productModules: ProductModule[] = [
     capabilities: ["Fontes", "Proveniência", "Alertas"],
   },
 ];
-

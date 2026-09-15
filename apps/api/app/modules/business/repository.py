@@ -2,6 +2,7 @@
 
 import json
 import sqlite3
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -28,6 +29,14 @@ class LeadNotFoundError(Exception):
 
 class LeadVersionConflictError(Exception):
     """Raised when a status change is based on stale data."""
+
+
+@dataclass(frozen=True)
+class AuditContext:
+    """Authenticated actor and request correlation for one write operation."""
+
+    actor_id: UUID | str = "system"
+    request_id: str = "system"
 
 
 class SQLiteCompanyLeadRepository:
@@ -71,17 +80,23 @@ class SQLiteCompanyLeadRepository:
                 CREATE TABLE IF NOT EXISTS business_audit_events (
                     id TEXT PRIMARY KEY,
                     organization_id TEXT NOT NULL,
+                    actor_id TEXT NOT NULL DEFAULT 'system',
+                    request_id TEXT NOT NULL DEFAULT 'unknown',
                     action TEXT NOT NULL,
                     resource_type TEXT NOT NULL,
                     resource_id TEXT NOT NULL,
                     occurred_at TEXT NOT NULL,
-                    metadata_json TEXT NOT NULL
+                    metadata_json TEXT NOT NULL,
+                    outcome TEXT NOT NULL DEFAULT 'success'
                 );
                 """
             )
             self._ensure_column(connection, "business_company_leads", "temperature", "TEXT NOT NULL DEFAULT 'morno'")
             self._ensure_column(connection, "business_company_leads", "external_place_id", "TEXT")
             self._ensure_column(connection, "business_company_leads", "lead_number", "INTEGER")
+            self._ensure_column(connection, "business_audit_events", "actor_id", "TEXT NOT NULL DEFAULT 'system'")
+            self._ensure_column(connection, "business_audit_events", "request_id", "TEXT NOT NULL DEFAULT 'unknown'")
+            self._ensure_column(connection, "business_audit_events", "outcome", "TEXT NOT NULL DEFAULT 'success'")
             self._backfill_lead_numbers(connection)
             connection.execute(
                 """CREATE UNIQUE INDEX IF NOT EXISTS idx_company_leads_tenant_number
@@ -193,14 +208,63 @@ class SQLiteCompanyLeadRepository:
 
     @staticmethod
     def _audit(
-        connection: sqlite3.Connection, organization_id: UUID, action: str, lead_id: UUID, metadata: dict[str, str]
+        connection: sqlite3.Connection,
+        organization_id: UUID,
+        action: str,
+        resource_type: str,
+        resource_id: UUID | str,
+        metadata: dict[str, object],
+        audit_context: AuditContext | None = None,
+        outcome: str = "success",
     ) -> None:
+        context = audit_context or AuditContext()
+        request_id = context.request_id[:128] if context.request_id.isprintable() else "unknown"
+        safe_metadata = {
+            key: value
+            for key, value in metadata.items()
+            if key.casefold() not in {"api_key", "authorization", "token", "secret"}
+        }
         connection.execute(
             """INSERT INTO business_audit_events
-            (id, organization_id, action, resource_type, resource_id, occurred_at, metadata_json)
-            VALUES (?, ?, ?, 'company_lead', ?, ?, ?)""",
-            (str(uuid4()), str(organization_id), action, str(lead_id), SQLiteCompanyLeadRepository._now().isoformat(), json.dumps(metadata)),
+            (id, organization_id, actor_id, request_id, action, resource_type, resource_id, occurred_at, metadata_json, outcome)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                str(uuid4()),
+                str(organization_id),
+                str(context.actor_id),
+                request_id,
+                action,
+                resource_type,
+                str(resource_id),
+                SQLiteCompanyLeadRepository._now().isoformat(),
+                json.dumps(safe_metadata, ensure_ascii=False),
+                outcome,
+            ),
         )
+
+    def record_audit_event(
+        self,
+        organization_id: UUID,
+        action: str,
+        resource_type: str,
+        resource_id: UUID | str,
+        audit_context: AuditContext,
+        metadata: dict[str, object] | None = None,
+        outcome: str = "success",
+    ) -> None:
+        """Persist a privacy-safe event for operations outside lead CRUD."""
+
+        with self.database.connect() as connection:
+            self._audit(
+                connection,
+                organization_id,
+                action,
+                resource_type,
+                resource_id,
+                metadata or {},
+                audit_context,
+                outcome,
+            )
 
     def list(self, organization_id: UUID, status: LeadStatus | None = None, query: str | None = None) -> list[CompanyLead]:
         clauses = ["organization_id = ?"]
@@ -218,7 +282,7 @@ class SQLiteCompanyLeadRepository:
             ).fetchall()
         return [self._from_row(row) for row in rows]
 
-    def create(self, organization_id: UUID, data: CompanyLeadCreate) -> CompanyLead:
+    def create(self, organization_id: UUID, data: CompanyLeadCreate, audit_context: AuditContext | None = None) -> CompanyLead:
         lead_id = uuid4()
         now = self._now()
         try:
@@ -239,13 +303,13 @@ class SQLiteCompanyLeadRepository:
                         data.external_place_id, now.isoformat(), now.isoformat(),
                     ),
                 )
-                self._audit(connection, organization_id, "company_lead.created", lead_id, {"source": data.source})
+                self._audit(connection, organization_id, "company_lead.created", "company_lead", lead_id, {"source": data.source}, audit_context)
                 row = connection.execute("SELECT * FROM business_company_leads WHERE id = ?", (str(lead_id),)).fetchone()
         except sqlite3.IntegrityError as error:
             raise LeadAlreadyExistsError from error
         return self._from_row(row)
 
-    def delete(self, organization_id: UUID, lead_id: UUID) -> None:
+    def delete(self, organization_id: UUID, lead_id: UUID, audit_context: AuditContext | None = None) -> None:
         """Delete one tenant-scoped lead and preserve a privacy-safe audit event."""
 
         with self.database.connect() as connection:
@@ -259,9 +323,15 @@ class SQLiteCompanyLeadRepository:
                 "DELETE FROM business_company_leads WHERE id = ? AND organization_id = ?",
                 (str(lead_id), str(organization_id)),
             )
-            self._audit(connection, organization_id, "company_lead.deleted", lead_id, {})
+            self._audit(connection, organization_id, "company_lead.deleted", "company_lead", lead_id, {}, audit_context)
 
-    def update_status(self, organization_id: UUID, lead_id: UUID, data: LeadStatusUpdate) -> CompanyLead:
+    def update_status(
+        self,
+        organization_id: UUID,
+        lead_id: UUID,
+        data: LeadStatusUpdate,
+        audit_context: AuditContext | None = None,
+    ) -> CompanyLead:
         now = self._now()
         with self.database.connect() as connection:
             cursor = connection.execute(
@@ -276,7 +346,15 @@ class SQLiteCompanyLeadRepository:
                 if current is None:
                     raise LeadNotFoundError
                 raise LeadVersionConflictError
-            self._audit(connection, organization_id, "company_lead.status_updated", lead_id, {"status": data.status.value})
+            self._audit(
+                connection,
+                organization_id,
+                "company_lead.status_updated",
+                "company_lead",
+                lead_id,
+                {"status": data.status.value},
+                audit_context,
+            )
             row = connection.execute("SELECT * FROM business_company_leads WHERE id = ?", (str(lead_id),)).fetchone()
         return self._from_row(row)
 

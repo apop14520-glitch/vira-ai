@@ -2,7 +2,7 @@
 
 ## Escopo
 
-Este repositório contém a fundação técnica do VIRA.AI. No estado atual não existem autenticação, scraping, coleta de dados pessoais, integrações pagas ou clientes de provedores de IA.
+Este repositório contém a fundação técnica do VIRA.AI. O modo local usa um principal explícito de desenvolvimento limitado ao loopback; ambientes diferentes de desenvolvimento exigem tokens de acesso e organização configurados pelo runtime. Scraping, coleta de dados pessoais, integrações pagas e clientes de provedores de IA continuam fora do escopo.
 
 ## Regras essenciais
 
@@ -13,6 +13,9 @@ Este repositório contém a fundação técnica do VIRA.AI. No estado atual não
 - Mantenha dados pessoais segregados de dados empresariais em modelos, permissões e armazenamento.
 - Conceda o menor privilégio possível a processos, usuários e integrações.
 - Registre eventos de segurança de forma auditável, sem registrar conteúdo sensível desnecessário.
+- Não habilite o bypass de desenvolvimento fora de `127.0.0.1`, `localhost` ou `::1`.
+- Use `ADMIN_ACCESS_TOKEN` somente para operações administrativas, como configurar ou remover a chave Foursquare.
+- Nunca coloque tokens de autenticação em variáveis `NEXT_PUBLIC_*` ou no bundle do navegador.
 
 ## Reporte responsável
 
@@ -22,4 +25,3 @@ Não publique detalhes de uma vulnerabilidade antes de uma correção ou coorden
 
 - [`docs/security/SECURITY_ARCHITECTURE.md`](docs/security/SECURITY_ARCHITECTURE.md)
 - [`docs/privacy/LGPD.md`](docs/privacy/LGPD.md)
-

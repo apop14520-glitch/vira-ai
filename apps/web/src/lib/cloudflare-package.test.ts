@@ -17,4 +17,11 @@ describe("contrato de build Cloudflare", () => {
     expect(packageJson.dependencies?.["@opennextjs/cloudflare"]).toBeTruthy();
     expect(packageJson.devDependencies?.wrangler).toBeTruthy();
   });
+
+  it("verifica artefatos antes de publicar", () => {
+    const packagePath = resolve(process.cwd(), "package.json");
+    const packageJson = JSON.parse(readFileSync(packagePath, "utf8")) as { scripts?: Record<string, string> };
+
+    expect(packageJson.scripts?.["check:cloudflare"]).toBe("node scripts/check-cloudflare-artifacts.mjs");
+  });
 });

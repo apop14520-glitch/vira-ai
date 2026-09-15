@@ -50,6 +50,18 @@ Ela deve ser configurada como variável server-side/secret no ambiente de
 execução. Não deve ser renomeada para `NEXT_PUBLIC_API_INTERNAL_URL`, nem
 exposta em componentes client-side.
 
+Quando o frontend e a API forem serviços separados no Railway, essa variável
+fica somente no serviço web. Ela deve apontar para a URL base do serviço da
+API, sem acrescentar `/login`, `/api` ou `/health`. O serviço da API recebe as
+variáveis de identidade e os tokens de runtime; ele não precisa receber
+`API_INTERNAL_URL` para atender às requisições.
+
+Para a primeira publicação, os nomes canônicos recomendados são
+`ADMIN_USERNAME`, `ADMIN_INITIAL_PASSWORD`, `ENVIRONMENT`, `CORS_ORIGINS`,
+`API_ACCESS_TOKEN`, `ADMIN_ACCESS_TOKEN` e `AUTH_ORGANIZATION_ID`. A senha
+inicial é usada apenas quando não existe uma credencial persistida; alterar a
+variável depois não redefine a senha existente.
+
 No ambiente local, o valor padrão aponta para `http://127.0.0.1:8000`. No
 Railway, a configuração existente deve continuar sendo administrada pelo
 serviço correspondente. Em Cloudflare, o mesmo contrato poderá ser mapeado

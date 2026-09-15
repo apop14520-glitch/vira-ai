@@ -76,6 +76,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
             <div className="hidden items-center gap-2 text-sm text-slate-500 lg:flex"><span className="text-slate-700">VIRA.AI</span><span>/</span><span className="text-slate-300">{navigation.find((item) => item.href === pathname)?.label ?? "Módulo"}</span></div>
             <div className="ml-auto flex items-center gap-3">
               <PreferencesMenu />
+              <LogoutButton />
             </div>
           </div>
         </header>
@@ -125,6 +126,21 @@ function Brand({ compact = false }: { compact?: boolean }) {
       <span className="text-lg font-semibold tracking-tight text-white">VIRA<span className="text-cyan-300">.AI</span></span>
     </Link>
   );
+}
+
+function LogoutButton() {
+  const [loading, setLoading] = useState(false);
+
+  async function logout() {
+    setLoading(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      window.location.assign("/login");
+    }
+  }
+
+  return <button type="button" onClick={() => void logout()} disabled={loading} className="rounded-xl border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300 transition hover:border-cyan-400/60 hover:bg-slate-900 hover:text-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 disabled:cursor-wait disabled:opacity-60">{loading ? "Saindo…" : "Sair"}</button>;
 }
 
 function NavItem({ href, label, symbol, active, compact = false }: { href: string; label: string; symbol: string; active: boolean; compact?: boolean }) {

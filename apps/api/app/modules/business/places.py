@@ -8,6 +8,10 @@ import httpx
 from app.modules.business.category_localization import translate_category_name, translate_category_names
 
 FOURSQUARE_SEARCH_URL = "https://places-api.foursquare.com/places/search"
+# Foursquare's older v3 endpoint is still used by existing API keys. Keep it
+# as a compatibility fallback while the current Service Key endpoint remains
+# the primary integration path.
+FOURSQUARE_LEGACY_SEARCH_URL = "https://api.foursquare.com/v3/places/search"
 FOURSQUARE_API_VERSION = "2025-06-17"
 
 
@@ -105,9 +109,25 @@ class FoursquarePlacesService:
             "Authorization": f"Bearer {key}",
             "X-Places-Api-Version": FOURSQUARE_API_VERSION,
         }
+        response: Any | None = None
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.get(FOURSQUARE_SEARCH_URL, params=params, headers=headers)
+                if response.status_code in {401, 403}:
+                    # Existing integrations may still contain a legacy v3 API
+                    # key, which is authenticated without the Bearer scheme.
+                    # Retry only authentication failures so normal provider
+                    # errors and rate limits are never duplicated.
+                    try:
+                        legacy_response = await client.get(
+                            FOURSQUARE_LEGACY_SEARCH_URL,
+                            params=params,
+                            headers={"Accept": "application/json", "Authorization": key},
+                        )
+                    except httpx.RequestError:
+                        legacy_response = None
+                    if legacy_response is not None:
+                        response = legacy_response
         except httpx.RequestError as error:
             raise PlacesProviderError("Não foi possível conectar à Foursquare agora.") from error
         if response.status_code in {401, 403}:

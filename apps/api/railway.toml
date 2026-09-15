@@ -1,0 +1,8 @@
+[build]
+builder = "RAILPACK"
+buildCommand = "python -m pip install --no-cache-dir ."
+
+[deploy]
+startCommand = "python -m pip install --no-cache-dir . && python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/health"
+healthcheckTimeout = 100

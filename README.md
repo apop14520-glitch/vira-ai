@@ -16,8 +16,11 @@ Fundação técnica de um ecossistema brasileiro de software SaaS, organizado co
 
 ## Fora do escopo desta fundação
 
-Não há scraping, coleta de dados pessoais, autenticação, integrações de IA,
-importação de contatos ou armazenamento persistente de chaves da Foursquare.
+Não há scraping, coleta de dados pessoais, integrações de IA, importação de
+contatos ou armazenamento persistente de chaves da Foursquare. Em ambientes
+hospedados, os endpoints de produto ficam bloqueados sem `API_ACCESS_TOKEN` e o
+frontend exige uma sessão administrativa configurada com `ADMIN_USERNAME`,
+`ADMIN_PASSWORD_HASH` e `AUTH_SECRET`.
 O primeiro fluxo de Business usa dados empresariais mínimos e uma busca externa
 explicitamente acionada pelo operador.
 
@@ -50,6 +53,11 @@ Copy-Item ..\..\.env.example .env
 uvicorn app.main:app --reload
 ```
 
+O `.env.example` ativa `ALLOW_INSECURE_LOCAL_API=true` apenas para o fluxo
+local em loopback. Em qualquer ambiente hospedado, mantenha essa opção ausente
+e configure `ENVIRONMENT=production`, `CORS_ORIGINS` com origens HTTPS e
+`API_ACCESS_TOKEN` no gerenciador de secrets do provedor.
+
 O endpoint ficará disponível em `http://127.0.0.1:8000/health`.
 
 A API versionada está reservada em `http://127.0.0.1:8000/api/v1/`.
@@ -65,8 +73,8 @@ O painel web possui as seguintes áreas navegáveis:
 - `/concursos`: VIRA Concursos.
 
 O VIRA Business é o primeiro fluxo operacional. As demais áreas continuam como
-shell e estados de módulo; autenticação, cobrança, scraping e processamento de
-dados pessoais permanecem desativados.
+shell e estados de módulo; cobrança, scraping e processamento de dados pessoais
+permanecem desativados.
 
 ### Frontend
 
@@ -76,6 +84,22 @@ npm run dev:web
 ```
 
 O frontend ficará disponível em `http://localhost:3000`.
+
+### Acesso administrativo hospedado
+
+O frontend exige login em `/login` antes de abrir qualquer módulo. Configure no
+Railway as variáveis privadas `ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH` e
+`AUTH_SECRET`. Para gerar um hash localmente sem expor a senha no código:
+
+```powershell
+$env:VIRA_PASSWORD = Read-Host "Senha forte (mínimo 12 caracteres)"
+node --experimental-strip-types -e "import('./apps/web/src/lib/auth-core.ts').then(async ({createPasswordHash}) => console.log(await createPasswordHash(process.env.VIRA_PASSWORD)))"
+Remove-Item Env:VIRA_PASSWORD
+```
+
+Use uma senha com pelo menos 12 caracteres e um `AUTH_SECRET` aleatório com pelo
+menos 32 caracteres. O cookie de sessão expira em oito horas e o login limita
+tentativas repetidas.
 
 No Windows, também é possível usar os atalhos `setup-web.cmd` e `start-web.cmd`. Eles localizam automaticamente `pnpm` ou `npm`; isso evita depender de `pnpm` estar previamente configurado no PATH.
 

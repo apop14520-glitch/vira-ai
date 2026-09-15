@@ -10,9 +10,8 @@ export function SystemStatus() {
 
   useEffect(() => {
     const controller = new AbortController();
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 
-    fetch(`${apiBaseUrl}/health`, { signal: controller.signal, cache: "no-store" })
+    fetch("/api/health", { signal: controller.signal, cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Healthcheck failed");
         const payload = (await response.json()) as { service?: string; status?: string };
@@ -25,9 +24,9 @@ export function SystemStatus() {
   }, []);
 
   const copy = {
-    checking: { label: "Verificando", detail: "Consultando a API local", dot: "bg-amber-300 animate-pulse" },
+    checking: { label: "Verificando", detail: "Consultando a API", dot: "bg-amber-300 animate-pulse" },
     online: { label: "Online", detail: "Healthcheck respondendo", dot: "bg-emerald-300" },
-    offline: { label: "Offline", detail: "Inicie a API local para conectar", dot: "bg-slate-500" },
+    offline: { label: "Offline", detail: "A API não respondeu", dot: "bg-slate-500" },
   }[state];
 
   return (

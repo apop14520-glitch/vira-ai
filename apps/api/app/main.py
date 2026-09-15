@@ -70,6 +70,10 @@ async def lifespan(application: FastAPI):
         settings.foursquare_rate_limit,
         settings.foursquare_rate_limit_window_seconds,
     )
+    application.state.identity_rate_limiter = SlidingWindowRateLimiter(
+        settings.admin_login_rate_limit,
+        settings.admin_login_rate_window_seconds,
+    )
     yield
     database.close()
 

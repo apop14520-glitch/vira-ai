@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 from datetime import UTC, datetime
+from importlib import import_module
 from uuid import UUID, uuid4
 
 import pytest
@@ -84,6 +85,31 @@ def test_login_sets_a_protected_cookie_and_session_is_readable(identity_client) 
         "username": "admin",
         "organization_id": str(ORGANIZATION_ID),
     }
+
+
+def test_application_lifespan_initializes_identity_rate_limiter(tmp_path, monkeypatch) -> None:
+    """The real application startup must make the login route usable."""
+
+    app_module = import_module("app.main")
+    settings = Settings(
+        environment="development",
+        allow_development_auth_bypass=False,
+        admin_username="admin",
+        admin_initial_password=INITIAL_PASSWORD,
+        database_url=f"sqlite:///{(tmp_path / 'lifespan.db').as_posix()}",
+        auth_organization_id=ORGANIZATION_ID,
+        admin_session_cookie_name="vira_admin_session",
+    )
+    monkeypatch.setattr(app_module, "settings", settings)
+
+    with TestClient(app_module.app) as client:
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "admin", "password": INITIAL_PASSWORD},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"authenticated": True, "username": "admin"}
 
 
 def test_invalid_login_has_a_generic_response_without_credentials(identity_client) -> None:

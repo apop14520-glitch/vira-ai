@@ -30,7 +30,7 @@ export default function LoginPage() {
   return (
     <main className="login-page">
       <div className="login-background" aria-hidden="true">
-        <img src="/brand/vira-ai-logo.png" alt="" />
+        <img src="/brand/logo.png" alt="" />
       </div>
       <section className="login-card" aria-labelledby="login-title">
         <div className="login-brand">

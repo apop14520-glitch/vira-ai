@@ -1,19 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const allowedAuthPaths = new Set([
-  "/v1/auth/login",
-  "/v1/auth/session",
-  "/v1/auth/logout",
-  "/v1/auth/password",
-]);
-
-function resolveUpstreamPath(path: string[]): string | null {
-  const requestedPath = `/${path.join("/")}`;
-  if (requestedPath === "/health") return "/health";
-  if (allowedAuthPaths.has(requestedPath)) return `/api${requestedPath}`;
-  if (requestedPath === "/v1/business" || requestedPath.startsWith("/v1/business/")) return `/api${requestedPath}`;
-  return null;
-}
+import { copySetCookieHeaders, resolveApiOrigin, resolveUpstreamPath } from "@/app/api/proxy-utils";
 
 function forwardHeaders(request: NextRequest): Headers {
   const headers = new Headers();
@@ -29,10 +16,9 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   const upstreamPath = resolveUpstreamPath(path);
   if (!upstreamPath) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Rota não encontrada." } }, { status: 404 });
 
-  const apiInternalUrl = process.env.API_INTERNAL_URL ?? "http://127.0.0.1:8000";
   let target: URL;
   try {
-    target = new URL(upstreamPath, apiInternalUrl);
+    target = new URL(upstreamPath, resolveApiOrigin(process.env.API_INTERNAL_URL, process.env.NODE_ENV));
   } catch {
     return NextResponse.json({ error: { code: "UPSTREAM_UNAVAILABLE", message: "A API local não está disponível." } }, { status: 502 });
   }
@@ -52,12 +38,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   }
 
   const responseHeaders = new Headers();
-  for (const name of ["content-type", "x-request-id", "retry-after", "www-authenticate"]) {
-    const value = response.headers.get(name);
-    if (value) responseHeaders.set(name, value);
-  }
-  const getSetCookie = (response.headers as Headers & { getSetCookie?: () => string[] }).getSetCookie;
-  for (const cookie of getSetCookie?.call(response.headers) ?? []) responseHeaders.append("set-cookie", cookie);
+  copySetCookieHeaders(response.headers, responseHeaders);
   return new NextResponse(response.body, { status: response.status, headers: responseHeaders });
 }
 

@@ -4,12 +4,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   replace: vi.fn(),
   getSession: vi.fn(),
+  session: { authenticated: true, username: "admin", organization_id: "org-local" },
   changePassword: vi.fn(),
   logout: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: mocks.replace }),
+}));
+
+vi.mock("@/components/auth-gate", () => ({
+  useAdminSession: () => mocks.session,
 }));
 
 vi.mock("@/lib/business-api", () => ({
@@ -47,6 +52,15 @@ describe("PreferencesMenu", () => {
       expect(screen.getByRole("menuitem", { name: /Segurança/ })).toBeInTheDocument();
       expect(screen.queryByText("Densidade")).not.toBeInTheDocument();
     });
+  });
+
+  it("reutiliza a sessão validada pelo AuthGate sem fazer uma segunda consulta", async () => {
+    render(<PreferencesMenu />);
+    fireEvent.click(screen.getByRole("button", { name: "Configurações" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /Segurança/ }));
+
+    await waitFor(() => expect(screen.getByText("admin")).toBeInTheDocument());
+    expect(mocks.getSession).not.toHaveBeenCalled();
   });
 
   it("fecha pelo controle de fechar", async () => {
@@ -98,7 +112,7 @@ describe("PreferencesMenu", () => {
     fireEvent.click(screen.getByRole("button", { name: "Alterar senha" }));
 
     await waitFor(() => expect(mocks.changePassword).toHaveBeenCalledWith("Senha-atual-2026!", "Nova-senha-2026!", "Nova-senha-2026!"));
-    expect(mocks.replace).toHaveBeenCalledWith("/login");
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/login"));
     expect(screen.getByLabelText("Senha atual")).toHaveValue("");
     expect(screen.getByLabelText("Nova senha")).toHaveValue("");
     expect(screen.getByLabelText("Confirmar nova senha")).toHaveValue("");

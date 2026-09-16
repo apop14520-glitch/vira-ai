@@ -99,8 +99,12 @@ pnpm --dir apps/web exec wrangler deploy --keep-vars
 
 O `wrangler` também está declarado na raiz do workspace para que o comando
 padrão de preview do Cloudflare (`npx wrangler versions upload`) funcione caso
-o painel seja deixado com o valor padrão. A forma explícita com `pnpm --dir`
-evita depender do diretório de trabalho escolhido pelo Workers Builds.
+o painel seja deixado com o valor padrão. A configuração `wrangler.jsonc` da
+raiz aponta para `apps/web/.open-next/worker.js` e
+`apps/web/.open-next/assets`, que são os caminhos reais quando o comando de
+publicação é executado a partir da raiz do repositório. A forma explícita com
+`pnpm --dir` continua recomendada porque deixa o diretório e a configuração
+usados pelo Workers Builds sem ambiguidade.
 
 Para uma publicação manual fora do Workers Builds, o script `deploy` do pacote
 continua executando, nessa ordem, o build OpenNext, a verificação de artefatos e

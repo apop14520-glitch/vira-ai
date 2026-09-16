@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
+import { CSSProperties, FormEvent, ReactNode, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
 import { useAdminSession } from "@/components/auth-gate";
@@ -10,6 +11,7 @@ import type { AdminSession } from "@/lib/auth-api";
 
 type ThemeChoice = "system" | "light" | "dark";
 type SectionId = "appearance" | "connections" | "security";
+type PanelPosition = { top: number; right: number };
 
 const themeLabels: Record<ThemeChoice, string> = { system: "Sistema", light: "Claro", dark: "Escuro" };
 const PASSWORD_MIN_LENGTH = 12;
@@ -48,6 +50,9 @@ export function PreferencesMenu() {
   const [securityMessage, setSecurityMessage] = useState<string | null>(null);
   const [securityMessageTone, setSecurityMessageTone] = useState<"error" | "success">("error");
   const menuRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [panelPosition, setPanelPosition] = useState<PanelPosition>({ top: 72, right: 16 });
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("vira-theme");
@@ -68,12 +73,33 @@ export function PreferencesMenu() {
   }, []);
 
   useEffect(() => {
-    const closeOnOutsideClick = (event: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(event.target as Node)) setOpen(false); };
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (menuRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
+    };
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
     document.addEventListener("mousedown", closeOnOutsideClick);
     document.addEventListener("keydown", closeOnEscape);
     return () => { document.removeEventListener("mousedown", closeOnOutsideClick); document.removeEventListener("keydown", closeOnEscape); };
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const updatePanelPosition = () => {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      setPanelPosition({ top: rect.bottom + 8, right: Math.max(16, window.innerWidth - rect.right) });
+    };
+    updatePanelPosition();
+    window.addEventListener("resize", updatePanelPosition);
+    window.addEventListener("scroll", updatePanelPosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePanelPosition);
+      window.removeEventListener("scroll", updatePanelPosition, true);
+    };
+  }, [open]);
 
   function selectTheme(nextChoice: ThemeChoice) {
     setChoice(nextChoice);
@@ -149,23 +175,28 @@ export function PreferencesMenu() {
     }
   }
 
-  return (
-    <div ref={menuRef} className="relative">
-      <button type="button" aria-expanded={open} aria-controls="vira-preferences-panel" aria-haspopup="dialog" aria-label="Configurações" title="Abrir configurações" onClick={() => setOpen((current) => !current)} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-cyan-400/40 bg-cyan-400/10 p-0 text-sm font-bold text-cyan-800 transition hover:border-cyan-400/70 hover:bg-cyan-400/20 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 dark:text-cyan-200">
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-300 text-xs font-black text-slate-950">V</span>
-      </button>
-
-      {open && <div id="vira-preferences-panel" role="dialog" aria-label="Configurações do VIRA.AI" className="settings-panel settings-panel--bounded absolute right-0 top-12 z-50 grid w-[min(94vw,680px)] grid-cols-[128px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-slate-300 bg-white text-slate-950 shadow-2xl shadow-slate-950/25 dark:border-slate-700 dark:bg-slate-900 dark:text-white sm:grid-cols-[190px_minmax(0,1fr)]">
-        <nav aria-label="Categorias de configuração" className="settings-nav overflow-y-auto border-r border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-950/70 sm:p-3">
-          <div className="settings-nav-header px-2 py-2"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-700 dark:text-cyan-300">Painel de controle</p><p className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-400">VIRA.AI local</p></div>
-          {menuGroups.map((group) => <div key={group.label} className="settings-nav-group mt-2.5"><p className="settings-nav-group-label px-2 pb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500">{group.label}</p>{group.items.map((item) => <button key={item.id} type="button" role="menuitem" onClick={() => setActiveSection(item.id)} className={`mb-1 flex w-full items-start gap-2 rounded-xl px-2 py-2.5 text-left transition ${activeSection === item.id ? "bg-cyan-100 text-cyan-950 dark:bg-cyan-400/15 dark:text-cyan-100" : "text-slate-700 hover:bg-slate-200 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"}`}><span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white text-xs font-bold text-cyan-700 shadow-sm dark:bg-slate-800 dark:text-cyan-300">{item.icon}</span><span className="min-w-0"><span className="block truncate text-xs font-semibold sm:text-sm">{item.label}</span><span className="hidden truncate text-[10px] font-medium text-slate-500 dark:text-slate-400 sm:block">{item.description}</span></span></button>)}</div>)}
-        </nav>
-        <section className="settings-content flex min-h-0 flex-col">
-          <header className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-4 py-3.5 dark:border-slate-800 sm:px-5"><div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-700 dark:text-cyan-300">Configuração</p><h2 className="mt-1 text-lg font-semibold sm:text-xl">{sectionCopy[activeSection].title}</h2><p className="mt-1 text-sm font-medium leading-5 text-slate-600 dark:text-slate-400">{sectionCopy[activeSection].description}</p></div><button type="button" onClick={() => setOpen(false)} aria-label="Fechar configurações" className="rounded-lg px-2 py-1 text-xl leading-none text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:hover:bg-slate-800 dark:hover:text-white">×</button></header>
-          <div className="settings-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain p-3.5 pb-10 sm:p-4 sm:pb-10">{activeSection === "appearance" && <AppearanceAndLocaleSection choice={choice} selectTheme={selectTheme} />}{activeSection === "connections" && <ConnectionsAndHealthSection status={foursquareStatus} keyValue={foursquareKey} setKeyValue={setFoursquareKey} saving={savingFoursquareKey} message={integrationMessage} save={saveFoursquareKey} clear={clearFoursquareKey} />}{activeSection === "security" && <SecuritySection session={session} currentPassword={currentPassword} newPassword={newPassword} confirmation={passwordConfirmation} setCurrentPassword={setCurrentPassword} setNewPassword={setNewPassword} setConfirmation={setPasswordConfirmation} saving={savingPassword} message={securityMessage} messageTone={securityMessageTone} submit={submitPassword} signOut={signOut} />}</div>
-        </section>
-      </div>}
+  const preferencesPanel = open ? (
+    <div ref={panelRef} id="vira-preferences-panel" role="dialog" aria-label="Configurações do VIRA.AI" style={{ "--settings-top": `${panelPosition.top}px`, "--settings-right": `${panelPosition.right}px` } as CSSProperties} className="settings-panel settings-panel--bounded z-50 grid w-[min(94vw,680px)] grid-cols-[128px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-slate-300 bg-white text-slate-950 shadow-2xl shadow-slate-950/25 dark:border-slate-700 dark:bg-slate-900 dark:text-white sm:grid-cols-[190px_minmax(0,1fr)]">
+      <nav aria-label="Categorias de configuração" className="settings-nav overflow-y-auto border-r border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-950/70 sm:p-3">
+        <div className="settings-nav-header px-2 py-2"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-700 dark:text-cyan-300">Painel de controle</p><p className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-400">VIRA.AI local</p></div>
+        {menuGroups.map((group) => <div key={group.label} className="settings-nav-group mt-2.5"><p className="settings-nav-group-label px-2 pb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500">{group.label}</p>{group.items.map((item) => <button key={item.id} type="button" role="menuitem" onClick={() => setActiveSection(item.id)} className={`mb-1 flex w-full items-start gap-2 rounded-xl px-2 py-2.5 text-left transition ${activeSection === item.id ? "bg-cyan-100 text-cyan-950 dark:bg-cyan-400/15 dark:text-cyan-100" : "text-slate-700 hover:bg-slate-200 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"}`}><span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white text-xs font-bold text-cyan-700 shadow-sm dark:bg-slate-800 dark:text-cyan-300">{item.icon}</span><span className="min-w-0"><span className="block truncate text-xs font-semibold sm:text-sm">{item.label}</span><span className="hidden truncate text-[10px] font-medium text-slate-500 dark:text-slate-400 sm:block">{item.description}</span></span></button>)}</div>)}
+      </nav>
+      <section className="settings-content flex min-h-0 flex-col">
+        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-4 py-3.5 dark:border-slate-800 sm:px-5"><div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-700 dark:text-cyan-300">Configuração</p><h2 className="mt-1 text-lg font-semibold sm:text-xl">{sectionCopy[activeSection].title}</h2><p className="mt-1 text-sm font-medium leading-5 text-slate-600 dark:text-slate-400">{sectionCopy[activeSection].description}</p></div><button type="button" onClick={() => setOpen(false)} aria-label="Fechar configurações" className="rounded-lg px-2 py-1 text-xl leading-none text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:hover:bg-slate-800 dark:hover:text-white">×</button></header>
+        <div className="settings-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain p-3.5 pb-10 sm:p-4 sm:pb-10">{activeSection === "appearance" && <AppearanceAndLocaleSection choice={choice} selectTheme={selectTheme} />}{activeSection === "connections" && <ConnectionsAndHealthSection status={foursquareStatus} keyValue={foursquareKey} setKeyValue={setFoursquareKey} saving={savingFoursquareKey} message={integrationMessage} save={saveFoursquareKey} clear={clearFoursquareKey} />}{activeSection === "security" && <SecuritySection session={session} currentPassword={currentPassword} newPassword={newPassword} confirmation={passwordConfirmation} setCurrentPassword={setCurrentPassword} setNewPassword={setNewPassword} setConfirmation={setPasswordConfirmation} saving={savingPassword} message={securityMessage} messageTone={securityMessageTone} submit={submitPassword} signOut={signOut} />}</div>
+      </section>
     </div>
+  ) : null;
+
+  return (
+    <>
+      <div ref={menuRef} className="relative">
+        <button ref={triggerRef} type="button" aria-expanded={open} aria-controls="vira-preferences-panel" aria-haspopup="dialog" aria-label="Configurações" title="Abrir configurações" onClick={() => setOpen((current) => !current)} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-cyan-400/40 bg-cyan-400/10 p-0 text-sm font-bold text-cyan-800 transition hover:border-cyan-400/70 hover:bg-cyan-400/20 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 dark:text-cyan-200">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-300 text-xs font-black text-slate-950">V</span>
+        </button>
+      </div>
+      {preferencesPanel && typeof document !== "undefined" ? createPortal(preferencesPanel, document.body) : null}
+    </>
   );
 }
 

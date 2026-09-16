@@ -44,6 +44,17 @@ describe("cliente same-origin", () => {
     });
   });
 
+  it("preserva a mensagem segura de validação da troca de senha", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ error: { message: "A senha atual está incorreta." } }), { status: 400 }),
+    );
+
+    await expect(apiRequest("/api/v1/auth/password", { method: "PUT" })).rejects.toMatchObject({
+      status: 400,
+      message: "A senha atual está incorreta.",
+    });
+  });
+
   it("mantém o retry-after quando o backend limita tentativas", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(null, { status: 429, headers: { "Retry-After": "12" } }),

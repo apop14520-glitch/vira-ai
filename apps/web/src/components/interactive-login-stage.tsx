@@ -41,6 +41,7 @@ export function InteractiveLoginStage({ children }: Readonly<{ children: ReactNo
         <span className="liquid-orb liquid-orb-cyan" aria-hidden="true" />
         <span className="liquid-orb liquid-orb-blue" aria-hidden="true" />
         <span className="liquid-orb liquid-orb-violet" aria-hidden="true" />
+        <span className="liquid-logo-gradient" aria-hidden="true" />
         <div className="liquid-logo-ambient" aria-hidden="true">
           <span className="liquid-logo-mark" />
         </div>

@@ -25,6 +25,15 @@ describe("contrato de build Cloudflare", () => {
     expect(packageJson.scripts?.["check:cloudflare"]).toBe("node scripts/check-cloudflare-artifacts.mjs");
   });
 
+  it("declara a origem pública da API para o Worker", () => {
+    const wranglerPath = resolve(process.cwd(), "wrangler.jsonc");
+    const wrangler = JSON.parse(readFileSync(wranglerPath, "utf8")) as {
+      vars?: Record<string, string>;
+    };
+
+    expect(wrangler.vars?.API_INTERNAL_URL).toBe("https://vira-api-production.up.railway.app");
+  });
+
   it("documenta a topologia híbrida e o rollback", () => {
     const documentationPath = resolve(process.cwd(), "../../docs/deployment/CLOUDFLARE.md");
     const documentation = readFileSync(documentationPath, "utf8");

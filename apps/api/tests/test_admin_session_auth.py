@@ -242,8 +242,35 @@ def test_password_change_rejects_wrong_current_password(identity_service) -> Non
     credential = service.ensure_initial_credential()
     session, _ = service.create_session(credential)
 
-    with pytest.raises(PasswordChangeError, match="não pôde ser alterada"):
+    with pytest.raises(PasswordChangeError, match="senha atual está incorreta"):
         service.change_password(session, "senha-incorreta", NEW_PASSWORD, NEW_PASSWORD)
+
+
+def test_password_change_rejects_reusing_the_current_password(identity_service) -> None:
+    service, _, _ = identity_service
+    credential = service.ensure_initial_credential()
+    session, _ = service.create_session(credential)
+
+    with pytest.raises(PasswordChangeError, match="diferente da senha atual"):
+        service.change_password(session, INITIAL_PASSWORD, INITIAL_PASSWORD, INITIAL_PASSWORD)
+
+
+def test_password_change_rejects_mismatched_confirmation(identity_service) -> None:
+    service, _, _ = identity_service
+    credential = service.ensure_initial_credential()
+    session, _ = service.create_session(credential)
+
+    with pytest.raises(PasswordChangeError, match="confirmação não corresponde"):
+        service.change_password(session, INITIAL_PASSWORD, NEW_PASSWORD, "Outra-senha-2026!")
+
+
+def test_password_change_explains_the_minimum_length(identity_service) -> None:
+    service, _, _ = identity_service
+    credential = service.ensure_initial_credential()
+    session, _ = service.create_session(credential)
+
+    with pytest.raises(PasswordChangeError, match="pelo menos 12 caracteres"):
+        service.change_password(session, INITIAL_PASSWORD, "curta", "curta")
 
 
 def test_session_cookie_resolves_an_administrative_principal(identity_service) -> None:

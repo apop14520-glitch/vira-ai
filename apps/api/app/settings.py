@@ -29,11 +29,17 @@ class Settings(BaseSettings):
     )
     development_organization_id: UUID = UUID("00000000-0000-4000-8000-000000000001")
     development_actor_id: UUID = UUID("00000000-0000-4000-8000-000000000002")
-    auth_organization_id: UUID | None = None
+    auth_organization_id: UUID | None = Field(
+        default=None,
+        validation_alias=AliasChoices("AUTH_ORGANIZATION_ID", "ID_DA_ORGANIZAÇÃO_AUTENTICADA"),
+    )
     api_actor_id: UUID = UUID("00000000-0000-4000-8000-000000000003")
     admin_actor_id: UUID = UUID("00000000-0000-4000-8000-000000000004")
     api_access_token: SecretStr | None = None
-    admin_access_token: SecretStr | None = None
+    admin_access_token: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("ADMIN_ACCESS_TOKEN", "TOKEN_DE_ACESSO_DE_ADMINISTRADOR"),
+    )
     allow_development_auth_bypass: bool | None = None
     admin_username: str = Field(
         default="admin",

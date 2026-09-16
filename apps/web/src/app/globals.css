@@ -107,16 +107,34 @@ body {
   pointer-events: none;
 }
 
+.liquid-logo-gradient {
+  position: absolute;
+  inset: 8% 7%;
+  pointer-events: none;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse 38% 42% at var(--liquid-x, 50%) var(--liquid-y, 50%), rgba(165, 243, 252, 0.3), transparent 72%),
+    radial-gradient(ellipse 58% 50% at 50% 50%, rgba(34, 211, 238, 0.2) 0%, rgba(59, 130, 246, 0.15) 38%, rgba(139, 92, 246, 0.1) 58%, transparent 78%),
+    linear-gradient(125deg, rgba(34, 211, 238, 0.12), transparent 38%, rgba(129, 140, 248, 0.14) 72%, transparent);
+  filter: blur(34px) saturate(1.45);
+  opacity: 0.92;
+  mix-blend-mode: screen;
+  transform: translateZ(0) scale(1.06);
+  mask-image: radial-gradient(ellipse 56% 47% at 50% 50%, #000 0%, rgba(0, 0, 0, 0.86) 58%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 56% 47% at 50% 50%, #000 0%, rgba(0, 0, 0, 0.86) 58%, transparent 100%);
+  transition: background 500ms cubic-bezier(0.22, 1, 0.36, 1), opacity 500ms ease;
+}
+
 .liquid-logo-ambient {
-  opacity: 0.075;
+  opacity: 0.14;
   mix-blend-mode: screen;
 }
 
 .liquid-logo-reveal {
-  opacity: 0.76;
+  opacity: 0.9;
   mix-blend-mode: screen;
-  mask-image: radial-gradient(circle 9rem at var(--liquid-x, 50%) var(--liquid-y, 50%), #000 0%, rgba(0, 0, 0, 0.84) 38%, rgba(0, 0, 0, 0.22) 72%, transparent 100%);
-  -webkit-mask-image: radial-gradient(circle 9rem at var(--liquid-x, 50%) var(--liquid-y, 50%), #000 0%, rgba(0, 0, 0, 0.84) 38%, rgba(0, 0, 0, 0.22) 72%, transparent 100%);
+  mask-image: radial-gradient(circle 11rem at var(--liquid-x, 50%) var(--liquid-y, 50%), #000 0%, rgba(0, 0, 0, 0.84) 38%, rgba(0, 0, 0, 0.22) 72%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle 11rem at var(--liquid-x, 50%) var(--liquid-y, 50%), #000 0%, rgba(0, 0, 0, 0.84) 38%, rgba(0, 0, 0, 0.22) 72%, transparent 100%);
   mask-repeat: no-repeat;
   -webkit-mask-repeat: no-repeat;
 }
@@ -134,14 +152,14 @@ body {
 
 .liquid-logo-ambient .liquid-logo-mark {
   background: url("/brand/logo.png") center / contain no-repeat;
-  filter: saturate(0.82) brightness(0.88) blur(0.5px);
+  filter: saturate(1.08) brightness(0.98) blur(0.8px) drop-shadow(0 0 2.5rem rgba(34, 211, 238, 0.2));
 }
 
 .liquid-logo-reveal .liquid-logo-mark {
   display: block;
   height: auto;
   object-fit: contain;
-  filter: saturate(1.08) brightness(1.15) contrast(1.08) drop-shadow(0 0 1.5rem rgba(103, 232, 249, 0.34));
+  filter: saturate(1.38) brightness(1.22) contrast(1.12) drop-shadow(0 0 1.8rem rgba(103, 232, 249, 0.48)) drop-shadow(0 0 3rem rgba(59, 130, 246, 0.24));
 }
 
 .liquid-surface::before,
@@ -228,8 +246,19 @@ body {
 }
 
 .settings-panel {
-  max-height: min(720px, calc(100dvh - 2rem));
+  max-height: min(760px, calc(100dvh - 1.25rem));
   scrollbar-gutter: stable;
+}
+
+.settings-panel--bounded {
+  height: min(760px, calc(100dvh - 4rem));
+  max-height: calc(100dvh - 4rem);
+  min-height: 0;
+}
+
+.settings-scroll {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
 }
 
 @keyframes liquid-float {
@@ -252,8 +281,8 @@ body {
   }
 
   .liquid-logo-reveal {
-    mask-image: radial-gradient(circle 7rem at 50% 50%, #000 0%, rgba(0, 0, 0, 0.72) 42%, transparent 100%);
-    -webkit-mask-image: radial-gradient(circle 7rem at 50% 50%, #000 0%, rgba(0, 0, 0, 0.72) 42%, transparent 100%);
+    mask-image: radial-gradient(circle 8rem at 50% 50%, #000 0%, rgba(0, 0, 0, 0.72) 42%, transparent 100%);
+    -webkit-mask-image: radial-gradient(circle 8rem at 50% 50%, #000 0%, rgba(0, 0, 0, 0.72) 42%, transparent 100%);
   }
 
   .settings-panel {
@@ -265,6 +294,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .login-panel-shell,
   .liquid-orb,
+  .liquid-logo-gradient,
   .liquid-logo-ambient,
   .liquid-logo-reveal,
   .liquid-logo-mark,
@@ -688,4 +718,54 @@ html[data-theme="light"] ::-webkit-scrollbar-thumb {
   .login-heading {
     margin-top: 2rem;
   }
+}
+
+/* O acesso administrativo permanece azul mesmo quando o workspace está em tema claro. */
+html[data-theme] .login-page--dark {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(8, 145, 178, 0.22), transparent 42%),
+    radial-gradient(circle at 85% 90%, rgba(91, 33, 182, 0.18), transparent 34%),
+    #020617;
+  color: #e2e8f0;
+}
+
+html[data-theme] .login-page--dark .login-stage {
+  background:
+    radial-gradient(circle at 50% 15%, rgba(14, 116, 144, 0.2), transparent 34rem),
+    #020617;
+}
+
+html[data-theme] .login-page--dark .login-panel {
+  background: rgba(15, 23, 42, 0.86);
+  border-color: rgba(100, 116, 139, 0.55);
+  color: #f8fafc;
+  box-shadow: 0 28px 80px rgba(2, 6, 23, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme] .login-page--dark .login-panel .text-white,
+html[data-theme] .login-page--dark .login-panel .text-slate-100,
+html[data-theme] .login-page--dark .login-panel .text-slate-200 {
+  color: #f8fafc !important;
+}
+
+html[data-theme] .login-page--dark .login-panel .text-slate-300 {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme] .login-page--dark .login-panel .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+html[data-theme] .login-page--dark .login-panel .text-cyan-300 {
+  color: #67e8f9 !important;
+}
+
+html[data-theme] .login-page--dark .login-input {
+  border-color: rgba(148, 163, 184, 0.65);
+  background: rgba(15, 23, 42, 0.82);
+  color: #f8fafc !important;
+}
+
+html[data-theme] .login-page--dark .login-input::placeholder {
+  color: #94a3b8;
 }

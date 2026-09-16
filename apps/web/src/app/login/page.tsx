@@ -11,7 +11,7 @@ import { ApiClientError } from "@/lib/api-client";
 export default function LoginPage() {
   const router = useRouter();
   const [nextPath, setNextPath] = useState("/");
-  const [username, setUsername] = useState("admin");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [setupToken, setSetupToken] = useState("");
@@ -57,7 +57,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="login-page min-h-screen">
+    <main className="login-page login-page--dark min-h-screen">
       <InteractiveLoginStage>
         <section className="login-panel w-full max-w-[440px] rounded-[1.75rem] border p-6 shadow-2xl sm:p-8" aria-labelledby="login-title">
           <div className="flex items-center gap-3">
@@ -77,7 +77,7 @@ export default function LoginPage() {
           <form onSubmit={submit} className="mt-7 space-y-4">
             <div>
               <label htmlFor="admin-username" className="text-sm font-semibold text-slate-200">Usuário</label>
-              <input id="admin-username" name="username" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" required className="login-input mt-2" />
+              <input id="admin-username" name="username" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" placeholder="Digite o usuário configurado" required className="login-input mt-2" />
             </div>
             <div>
               <label htmlFor="admin-password" className="text-sm font-semibold text-slate-200">Senha</label>

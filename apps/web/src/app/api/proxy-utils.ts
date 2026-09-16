@@ -50,6 +50,14 @@ export function resolveApiOrigin(rawValue: string | undefined, runtimeEnvironmen
   return origin;
 }
 
+export function resolveConfiguredApiOrigin(
+  canonicalValue: string | undefined,
+  legacyValue: string | undefined,
+  runtimeEnvironment: string | undefined,
+): URL {
+  return resolveApiOrigin(canonicalValue?.trim() || legacyValue, runtimeEnvironment);
+}
+
 export function copySetCookieHeaders(source: Headers, target: Headers): void {
   for (const name of forwardedResponseHeaders) {
     const value = source.get(name);

@@ -179,13 +179,15 @@ class AdminSessionService:
 
         credential = self.credential_repository.get_credential(session.username)
         if credential is None or not verify_password(current_password, credential.password_hash):
-            raise PasswordChangeError("A senha não pôde ser alterada.")
+            raise PasswordChangeError("A senha atual está incorreta.")
         if new_password != confirmation:
-            raise PasswordChangeError("A senha não pôde ser alterada.")
+            raise PasswordChangeError("A confirmação não corresponde à nova senha.")
+        if hmac.compare_digest(current_password, new_password):
+            raise PasswordChangeError("A nova senha precisa ser diferente da senha atual.")
         try:
             validate_new_password(new_password)
         except ValueError as error:
-            raise PasswordChangeError("A senha não pôde ser alterada. Verifique os requisitos.") from error
+            raise PasswordChangeError(str(error)) from error
 
         now = self._now()
         changed = AdminCredential(

@@ -21,7 +21,8 @@ export class ApiClientError extends Error {
   }
 }
 
-function safeMessage(status: number, path: string): string {
+function safeMessage(status: number, path: string, serverMessage?: string): string {
+  if (status === 400 && path === "/api/v1/auth/password" && serverMessage?.trim()) return serverMessage;
   if (status === 401 && path === "/api/v1/auth/login") return "Usuário ou senha inválidos.";
   if (status === 401 && path === "/api/v1/auth/setup") return "Código de ativação inválido.";
   if (status === 401) return "Sua sessão expirou. Entre novamente para continuar.";
@@ -59,7 +60,7 @@ export async function apiRequest(path: string, init: RequestInit = {}): Promise<
   const payload = (await response.clone().json().catch(() => null)) as ApiErrorPayload | null;
   const retryAfterValue = response.headers.get("Retry-After");
   const retryAfter = retryAfterValue ? Number.parseInt(retryAfterValue, 10) : undefined;
-  throw new ApiClientError(safeMessage(response.status, path), {
+  throw new ApiClientError(safeMessage(response.status, path, payload?.error?.message), {
     status: response.status,
     code: payload?.error?.code,
     requestId: payload?.error?.request_id ?? response.headers.get("X-Request-ID") ?? undefined,

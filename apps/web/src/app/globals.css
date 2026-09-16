@@ -246,7 +246,11 @@ body {
 }
 
 .settings-panel {
-  max-height: min(720px, calc(100dvh - 2rem));
+  max-height: min(760px, calc(100dvh - 1.25rem));
+  scrollbar-gutter: stable;
+}
+
+.settings-scroll {
   scrollbar-gutter: stable;
 }
 

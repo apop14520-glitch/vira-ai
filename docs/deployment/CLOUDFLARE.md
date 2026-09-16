@@ -35,15 +35,17 @@ artefato `.open-next/worker.js`, os assets `.open-next/assets`,
 `nodejs_compat` e observabilidade habilitada. O build usa
 `apps/web/open-next.config.ts`.
 
-No ambiente de runtime do Worker, crie uma variável secreta ou variável
-criptografada com somente esta finalidade:
+O repositório declara em `apps/web/wrangler.jsonc` a origem pública padrão da
+API, que não é um segredo:
 
 ```text
 API_INTERNAL_URL=https://vira-api-production.up.railway.app
 ```
 
-Use a URL base sem `/login`, `/api` ou `/health`. Não crie
-`NEXT_PUBLIC_API_INTERNAL_URL` e não coloque `API_ACCESS_TOKEN`,
+Se preferir administrar a configuração pelo painel do Cloudflare, mantenha a
+mesma variável `API_INTERNAL_URL` na versão ativa do Worker; a publicação usa
+`--keep-vars` para preservar variáveis já configuradas. Use a URL base sem
+`/login`, `/api` ou `/health`. Não crie `NEXT_PUBLIC_API_INTERNAL_URL` e não coloque `API_ACCESS_TOKEN`,
 `ADMIN_ACCESS_TOKEN`, `ADMIN_INITIAL_PASSWORD` ou `FOURSQUARE_API_KEY` no
 Cloudflare Worker. Esses valores, quando necessários, pertencem ao serviço
 `vira-api` no Railway.

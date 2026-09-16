@@ -23,7 +23,10 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
       resolveConfiguredApiOrigin(process.env.API_INTERNAL_URL, process.env.URL_INTERNA_DA_API, process.env.NODE_ENV),
     );
   } catch {
-    return NextResponse.json({ error: { code: "UPSTREAM_UNAVAILABLE", message: "A API local não está disponível." } }, { status: 502 });
+    return NextResponse.json(
+      { error: { code: "UPSTREAM_MISCONFIGURED", message: "A API não está configurada neste Worker. Defina API_INTERNAL_URL com a URL pública do serviço Railway." } },
+      { status: 502 },
+    );
   }
 
   const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer();
@@ -37,7 +40,10 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
       cache: "no-store",
     });
   } catch {
-    return NextResponse.json({ error: { code: "UPSTREAM_UNAVAILABLE", message: "A API local não está disponível." } }, { status: 502 });
+    return NextResponse.json(
+      { error: { code: "UPSTREAM_UNAVAILABLE", message: "Não foi possível conectar à API. Verifique se o serviço Railway está ativo." } },
+      { status: 502 },
+    );
   }
 
   const responseHeaders = new Headers();

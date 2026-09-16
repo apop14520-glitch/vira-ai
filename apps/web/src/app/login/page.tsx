@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
@@ -101,10 +100,6 @@ export default function LoginPage() {
             <button type="submit" disabled={submitting || !username.trim() || !password || (isSetup && (!confirmation || !setupToken || !setupStatus?.configured))} className="login-submit mt-1 w-full rounded-xl px-4 py-3.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60">{submitting ? (isSetup ? "Criando…" : "Entrando…") : (isSetup ? "Criar acesso" : "Entrar")}</button>
           </form>
 
-          <div className="mt-6 flex items-center justify-between gap-3 text-xs text-slate-400">
-            <span>Sessão protegida por 8 horas.</span>
-            <Link href="/" className="text-cyan-300 transition hover:text-cyan-200">Voltar</Link>
-          </div>
         </section>
       </InteractiveLoginStage>
     </main>

@@ -49,6 +49,16 @@ describe("LoginPage", () => {
     expect(screen.getByRole("main")).toHaveClass("login-page", "login-page--dark");
   });
 
+  it("não exibe informações auxiliares nem retorno na tela de acesso", async () => {
+    mocks.getInitialSetupStatus.mockResolvedValue({ required: false, configured: true });
+    render(<LoginPage />);
+
+    await screen.findByRole("heading", { name: "Entrar no painel" });
+
+    expect(screen.queryByText("Sessão protegida por 8 horas.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Voltar" })).not.toBeInTheDocument();
+  });
+
   it("envia os quatro campos e encaminha ao painel sem repetir a senha", async () => {
     mocks.getInitialSetupStatus.mockResolvedValue({ required: true, configured: true });
     mocks.setupInitialAdmin.mockResolvedValue({ authenticated: true, username: "novo-admin" });

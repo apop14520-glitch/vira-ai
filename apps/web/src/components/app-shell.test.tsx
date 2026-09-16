@@ -24,4 +24,10 @@ describe("AppShell", () => {
     expect(screen.getByRole("link", { name: /Business/ })).toHaveAttribute("href", "/business");
     expect(screen.queryByText("Workspace local")).not.toBeInTheDocument();
   });
+
+  it("mantém o conteúdo encostado ao cabeçalho no celular sem perder o espaçamento inferior", () => {
+    render(<AppShell><div>Conteúdo</div></AppShell>);
+
+    expect(screen.getByRole("main")).toHaveClass("pt-0", "pb-7");
+  });
 });

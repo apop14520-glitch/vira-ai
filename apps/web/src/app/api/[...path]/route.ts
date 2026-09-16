@@ -46,7 +46,10 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     );
   }
 
-  const responseHeaders = new Headers();
+  const responseHeaders = new Headers({
+    "cache-control": "private, no-store, max-age=0",
+    vary: "Cookie",
+  });
   copySetCookieHeaders(response.headers, responseHeaders);
   return new NextResponse(response.body, { status: response.status, headers: responseHeaders });
 }

@@ -13,7 +13,12 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: mocks.replace }),
 }));
 
-import { AuthGate } from "@/components/auth-gate";
+import { AuthGate, useAdminSession } from "@/components/auth-gate";
+
+function SessionProbe() {
+  const session = useAdminSession();
+  return <span>{session?.username ?? "sem sessão"}</span>;
+}
 
 describe("AuthGate", () => {
   beforeEach(() => {
@@ -28,6 +33,14 @@ describe("AuthGate", () => {
 
     await waitFor(() => expect(screen.getByText("conteúdo protegido")).toBeInTheDocument());
     expect(mocks.replace).not.toHaveBeenCalled();
+  });
+
+  it("compartilha a sessão já validada com o conteúdo protegido", async () => {
+    mocks.getSession.mockResolvedValue({ authenticated: true, username: "admin", organization_id: "org-local" });
+
+    render(<AuthGate><SessionProbe /></AuthGate>);
+
+    await waitFor(() => expect(screen.getByText("admin")).toBeInTheDocument());
   });
 
   it("redireciona para o login quando a sessão não existe", async () => {

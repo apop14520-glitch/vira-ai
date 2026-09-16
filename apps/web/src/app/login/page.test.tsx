@@ -40,6 +40,18 @@ describe("LoginPage", () => {
     expect(screen.queryByLabelText("Código de ativação")).not.toBeInTheDocument();
   });
 
+  it("preserva exatamente o usuário digitado no celular", async () => {
+    mocks.getInitialSetupStatus.mockResolvedValue({ required: false, configured: true });
+    render(<LoginPage />);
+
+    await screen.findByRole("heading", { name: "Entrar no painel" });
+
+    const username = screen.getByLabelText("Usuário");
+    expect(username).toHaveAttribute("autocapitalize", "none");
+    expect(username).toHaveAttribute("autocorrect", "off");
+    expect(username).toHaveAttribute("spellcheck", "false");
+  });
+
   it("mantém a tela de acesso isolada no tema azul escuro", async () => {
     mocks.getInitialSetupStatus.mockResolvedValue({ required: false, configured: true });
     render(<LoginPage />);
@@ -47,6 +59,16 @@ describe("LoginPage", () => {
     await screen.findByRole("heading", { name: "Entrar no painel" });
 
     expect(screen.getByRole("main")).toHaveClass("login-page", "login-page--dark");
+  });
+
+  it("não exibe informações auxiliares nem retorno na tela de acesso", async () => {
+    mocks.getInitialSetupStatus.mockResolvedValue({ required: false, configured: true });
+    render(<LoginPage />);
+
+    await screen.findByRole("heading", { name: "Entrar no painel" });
+
+    expect(screen.queryByText("Sessão protegida por 8 horas.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Voltar" })).not.toBeInTheDocument();
   });
 
   it("envia os quatro campos e encaminha ao painel sem repetir a senha", async () => {

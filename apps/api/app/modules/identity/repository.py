@@ -69,6 +69,19 @@ class SQLiteIdentityRepository:
         )
 
     @staticmethod
+    def _credential_values(credential: AdminCredential) -> tuple[object, ...]:
+        return (
+            credential.username,
+            credential.organization_id,
+            credential.password_hash.algorithm,
+            credential.password_hash.iterations,
+            credential.password_hash.salt_b64,
+            credential.password_hash.digest_b64,
+            SQLiteIdentityRepository._timestamp(credential.password_changed_at),
+            SQLiteIdentityRepository._timestamp(credential.updated_at),
+        )
+
+    @staticmethod
     def _session_from_row(row: sqlite3.Row) -> AdminSession:
         return AdminSession(
             session_id=row["session_id"],
@@ -88,6 +101,32 @@ class SQLiteIdentityRepository:
             ).fetchone()
         return self._credential_from_row(row) if row else None
 
+    def get_any_credential(self) -> AdminCredential | None:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM identity_admin_credentials LIMIT 1"
+            ).fetchone()
+        return self._credential_from_row(row) if row else None
+
+    def create_initial_credential(self, credential: AdminCredential) -> bool:
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            exists = connection.execute(
+                "SELECT EXISTS(SELECT 1 FROM identity_admin_credentials)"
+            ).fetchone()[0]
+            if exists:
+                return False
+            connection.execute(
+                """
+                INSERT INTO identity_admin_credentials
+                (username, organization_id, password_algorithm, password_iterations,
+                 password_salt_b64, password_digest_b64, password_changed_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                self._credential_values(credential),
+            )
+        return True
+
     def save_credential(self, credential: AdminCredential) -> None:
         with self.database.connect() as connection:
             connection.execute(
@@ -105,16 +144,7 @@ class SQLiteIdentityRepository:
                     password_changed_at = excluded.password_changed_at,
                     updated_at = excluded.updated_at
                 """,
-                (
-                    credential.username,
-                    credential.organization_id,
-                    credential.password_hash.algorithm,
-                    credential.password_hash.iterations,
-                    credential.password_hash.salt_b64,
-                    credential.password_hash.digest_b64,
-                    self._timestamp(credential.password_changed_at),
-                    self._timestamp(credential.updated_at),
-                ),
+                self._credential_values(credential),
             )
 
     def create_session(self, session: AdminSession) -> None:

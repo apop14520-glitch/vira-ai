@@ -7,10 +7,23 @@ from starlette.responses import JSONResponse
 
 from app.modules.business.repository import AuditContext
 from app.modules.identity.domain import AdminSession
-from app.modules.identity.schemas import LoginRequest, LoginResponse, PasswordChangeRequest, SessionResponse
+from app.modules.identity.schemas import (
+    InitialSetupRequest,
+    InitialSetupStatusResponse,
+    LoginRequest,
+    LoginResponse,
+    PasswordChangeRequest,
+    SessionResponse,
+)
 from app.security.auth import Principal, get_current_session_principal
 from app.security.rate_limit import SlidingWindowRateLimiter
-from app.security.sessions import AdminSessionService, PasswordChangeError
+from app.security.sessions import (
+    AdminSessionService,
+    InitialSetupAlreadyCompleted,
+    InitialSetupNotConfigured,
+    InitialSetupRejected,
+    PasswordChangeError,
+)
 from app.settings import Settings
 
 
@@ -101,6 +114,53 @@ def _current_session(request: Request) -> AdminSession | None:
     settings = _settings(request)
     raw_token = request.cookies.get(settings.admin_session_cookie_name)
     return _service(request).resolve_session(raw_token)
+
+
+@router.get("/setup-status", response_model=InitialSetupStatusResponse, tags=["identity"])
+def initial_setup_status(request: Request) -> InitialSetupStatusResponse:
+    settings = _settings(request)
+    return InitialSetupStatusResponse(
+        required=_service(request).initial_setup_required(),
+        configured=settings.admin_setup_token is not None,
+    )
+
+
+@router.post("/setup", response_model=LoginResponse, tags=["identity"])
+def initial_setup(payload: InitialSetupRequest, request: Request) -> JSONResponse:
+    settings = _settings(request)
+    key = f"setup:{_rate_key(request, payload.username)}"
+    limiter = _limiter(request)
+    if not limiter.allow(key):
+        raise HTTPException(
+            status_code=429,
+            detail="Muitas tentativas. Aguarde antes de tentar novamente.",
+            headers={"Retry-After": str(limiter.retry_after(key))},
+        )
+
+    try:
+        credential = _service(request).create_initial_credential(
+            payload.username,
+            payload.password,
+            payload.confirmation,
+            payload.setup_token,
+        )
+    except InitialSetupRejected as error:
+        raise HTTPException(status_code=401, detail=str(error)) from error
+    except InitialSetupAlreadyCompleted as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except InitialSetupNotConfigured as error:
+        raise HTTPException(status_code=412, detail=str(error)) from error
+
+    _, raw_token = _service(request).create_session(credential)
+    _audit(
+        request,
+        action="admin_initial_setup_succeeded",
+        organization_id=UUID(credential.organization_id),
+        actor_id=settings.admin_actor_id,
+    )
+    response = JSONResponse(content={"authenticated": True, "username": credential.username})
+    _set_session_cookie(response, settings, raw_token)
+    return response
 
 
 @router.post("/login", response_model=LoginResponse, tags=["identity"])

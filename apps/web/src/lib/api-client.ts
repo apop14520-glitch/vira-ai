@@ -23,10 +23,17 @@ export class ApiClientError extends Error {
 
 function safeMessage(status: number, path: string): string {
   if (status === 401 && path === "/api/v1/auth/login") return "Usuário ou senha inválidos.";
+  if (status === 401 && path === "/api/v1/auth/setup") return "Código de ativação inválido.";
   if (status === 401) return "Sua sessão expirou. Entre novamente para continuar.";
   if (status === 403) return "Você não tem permissão para realizar esta ação.";
   if (status === 404) return "O recurso solicitado não foi encontrado.";
+  if (status === 409 && path === "/api/v1/auth/setup") {
+    return "O acesso administrativo já foi criado. Entre com suas credenciais.";
+  }
   if (status === 409) return "A alteração entrou em conflito com outro registro.";
+  if (status === 412 && path === "/api/v1/auth/setup") {
+    return "O código de ativação ainda não foi configurado no servidor.";
+  }
   if (status === 412) return "A operação depende de uma configuração válida.";
   if (status === 429) return "Muitas tentativas. Aguarde antes de tentar novamente.";
   if (status >= 500) return "O serviço está temporariamente indisponível.";

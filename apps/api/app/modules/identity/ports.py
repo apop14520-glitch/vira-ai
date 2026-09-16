@@ -12,6 +12,12 @@ class CredentialRepository(Protocol):
     def get_credential(self, username: str) -> AdminCredential | None:
         """Return one credential by its normalized username."""
 
+    def get_any_credential(self) -> AdminCredential | None:
+        """Return an existing administrative credential, if any."""
+
+    def create_initial_credential(self, credential: AdminCredential) -> bool:
+        """Atomically insert the credential only when none exists."""
+
     def save_credential(self, credential: AdminCredential) -> None:
         """Insert or update a credential record."""
 

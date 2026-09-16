@@ -7,6 +7,11 @@ describe("contrato do proxy Cloudflare", () => {
     expect(resolveUpstreamPath(["v1", "auth", "login"])).toBe("/api/v1/auth/login");
   });
 
+  it("encaminha somente as rotas públicas de ativação administrativa", () => {
+    expect(resolveUpstreamPath(["v1", "auth", "setup-status"])).toBe("/api/v1/auth/setup-status");
+    expect(resolveUpstreamPath(["v1", "auth", "setup"])).toBe("/api/v1/auth/setup");
+  });
+
   it("recusa uma rota fora da allowlist", () => {
     expect(resolveUpstreamPath(["v1", "admin", "secrets"])).toBeNull();
   });

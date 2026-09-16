@@ -39,6 +39,30 @@ def test_credential_round_trip_keeps_only_password_hash_metadata(identity_reposi
     assert password not in repr(loaded)
 
 
+def test_initial_credential_is_created_only_when_repository_is_empty(identity_repository) -> None:
+    repository, _ = identity_repository
+    now = datetime(2026, 9, 15, 12, 0, tzinfo=UTC)
+    first = AdminCredential(
+        username="first-admin",
+        organization_id="00000000-0000-4000-8000-000000000001",
+        password_hash=create_password_hash("First-admin-2026!"),
+        password_changed_at=now,
+        updated_at=now,
+    )
+    second = AdminCredential(
+        username="second-admin",
+        organization_id="00000000-0000-4000-8000-000000000001",
+        password_hash=create_password_hash("Second-admin-2026!"),
+        password_changed_at=now,
+        updated_at=now,
+    )
+
+    assert repository.create_initial_credential(first) is True
+    assert repository.create_initial_credential(second) is False
+    assert repository.get_any_credential() == first
+    assert repository.get_credential(second.username) is None
+
+
 def test_active_session_is_not_returned_after_expiration_or_revocation(identity_repository) -> None:
     repository, database = identity_repository
     created_at = datetime(2026, 9, 15, 12, 0, tzinfo=UTC)

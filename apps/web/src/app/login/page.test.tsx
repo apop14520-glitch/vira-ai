@@ -35,6 +35,8 @@ describe("LoginPage", () => {
     render(<LoginPage />);
     expect(await screen.findByRole("heading", { name: "Entrar no painel" })).toBeInTheDocument();
     await waitFor(() => expect(mocks.getInitialSetupStatus).toHaveBeenCalled());
+    expect(screen.getByLabelText("Usuário")).toHaveValue("");
+    expect(screen.getByLabelText("Usuário")).toHaveAttribute("placeholder", "Digite o usuário configurado");
     expect(screen.queryByLabelText("Código de ativação")).not.toBeInTheDocument();
   });
 
@@ -58,6 +60,7 @@ describe("LoginPage", () => {
     mocks.setupInitialAdmin.mockRejectedValue(new Error("Código inválido."));
     render(<LoginPage />);
     await screen.findByLabelText("Código de ativação");
+    fireEvent.change(screen.getByLabelText("Usuário"), { target: { value: "novo-admin" } });
     fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "Senha-segura-2026!" } });
     fireEvent.change(screen.getByLabelText("Confirmar senha"), { target: { value: "Senha-segura-2026!" } });
     fireEvent.change(screen.getByLabelText("Código de ativação"), { target: { value: "errado" } });

@@ -45,6 +45,7 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("ADMIN_INITIAL_PASSWORD", "SENHA_INICIAL_DO_ADMINISTRADOR"),
     )
+    admin_setup_token: SecretStr | None = Field(default=None, validation_alias="ADMIN_SETUP_TOKEN")
     admin_session_cookie_name: str = Field(default="vira_admin_session", min_length=1, max_length=64)
     admin_session_ttl_seconds: int = Field(default=28_800, ge=300, le=86_400)
     admin_login_rate_limit: int = Field(default=5, ge=1, le=100)

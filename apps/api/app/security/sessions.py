@@ -1,5 +1,6 @@
 """Administrative session service with opaque browser tokens."""
 
+import hmac
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
@@ -14,6 +15,18 @@ from app.settings import Settings
 
 class PasswordChangeError(Exception):
     """Raised when a password change cannot be completed safely."""
+
+
+class InitialSetupAlreadyCompleted(Exception):
+    """Raised when an administrative credential already exists."""
+
+
+class InitialSetupNotConfigured(Exception):
+    """Raised when the runtime has no initial setup token."""
+
+
+class InitialSetupRejected(Exception):
+    """Raised when initial setup input cannot be accepted safely."""
 
 
 class AdminSessionService:
@@ -43,6 +56,12 @@ class AdminSessionService:
             return None
         return configured.get_secret_value() if hasattr(configured, "get_secret_value") else str(configured)
 
+    def _setup_token(self) -> str | None:
+        configured = self.settings.admin_setup_token
+        if configured is None:
+            return None
+        return configured.get_secret_value() if hasattr(configured, "get_secret_value") else str(configured)
+
     def _organization_id(self) -> str:
         organization_id = self.settings.auth_organization_id or self.settings.development_organization_id
         return str(organization_id)
@@ -50,7 +69,7 @@ class AdminSessionService:
     def ensure_initial_credential(self) -> AdminCredential | None:
         """Create the first credential once, if the runtime supplied one."""
 
-        existing = self.credential_repository.get_credential(self.settings.admin_username)
+        existing = self.credential_repository.get_any_credential()
         if existing is not None:
             return existing
         initial_password = self._initial_password()
@@ -65,7 +84,51 @@ class AdminSessionService:
             password_changed_at=now,
             updated_at=now,
         )
-        self.credential_repository.save_credential(credential)
+        if self.credential_repository.create_initial_credential(credential):
+            return credential
+        return self.credential_repository.get_any_credential()
+
+    def initial_setup_required(self) -> bool:
+        """Return whether no administrative credential exists yet."""
+
+        return self.credential_repository.get_any_credential() is None
+
+    def create_initial_credential(
+        self,
+        username: str,
+        password: str,
+        confirmation: str,
+        setup_token: str,
+    ) -> AdminCredential:
+        """Create the sole initial credential after validating runtime and input secrets."""
+
+        if not self.initial_setup_required():
+            raise InitialSetupAlreadyCompleted("O acesso administrativo inicial já foi criado.")
+        expected_token = self._setup_token()
+        if expected_token is None:
+            raise InitialSetupNotConfigured("A ativação inicial não está configurada.")
+        if not hmac.compare_digest(setup_token, expected_token):
+            raise InitialSetupRejected("A ativação inicial não pôde ser concluída.")
+        if password != confirmation:
+            raise InitialSetupRejected("A ativação inicial não pôde ser concluída.")
+        normalized_username = username.strip()
+        if not normalized_username:
+            raise InitialSetupRejected("A ativação inicial não pôde ser concluída.")
+        try:
+            validate_new_password(password)
+        except ValueError as error:
+            raise InitialSetupRejected("A ativação inicial não pôde ser concluída.") from error
+
+        now = self._now()
+        credential = AdminCredential(
+            username=normalized_username,
+            organization_id=self._organization_id(),
+            password_hash=create_password_hash(password),
+            password_changed_at=now,
+            updated_at=now,
+        )
+        if not self.credential_repository.create_initial_credential(credential):
+            raise InitialSetupAlreadyCompleted("O acesso administrativo inicial já foi criado.")
         return credential
 
     def authenticate(self, username: str, password: str) -> AdminCredential | None:

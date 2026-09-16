@@ -719,3 +719,53 @@ html[data-theme="light"] ::-webkit-scrollbar-thumb {
     margin-top: 2rem;
   }
 }
+
+/* O acesso administrativo permanece azul mesmo quando o workspace está em tema claro. */
+html[data-theme] .login-page--dark {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(8, 145, 178, 0.22), transparent 42%),
+    radial-gradient(circle at 85% 90%, rgba(91, 33, 182, 0.18), transparent 34%),
+    #020617;
+  color: #e2e8f0;
+}
+
+html[data-theme] .login-page--dark .login-stage {
+  background:
+    radial-gradient(circle at 50% 15%, rgba(14, 116, 144, 0.2), transparent 34rem),
+    #020617;
+}
+
+html[data-theme] .login-page--dark .login-panel {
+  background: rgba(15, 23, 42, 0.86);
+  border-color: rgba(100, 116, 139, 0.55);
+  color: #f8fafc;
+  box-shadow: 0 28px 80px rgba(2, 6, 23, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme] .login-page--dark .login-panel .text-white,
+html[data-theme] .login-page--dark .login-panel .text-slate-100,
+html[data-theme] .login-page--dark .login-panel .text-slate-200 {
+  color: #f8fafc !important;
+}
+
+html[data-theme] .login-page--dark .login-panel .text-slate-300 {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme] .login-page--dark .login-panel .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+html[data-theme] .login-page--dark .login-panel .text-cyan-300 {
+  color: #67e8f9 !important;
+}
+
+html[data-theme] .login-page--dark .login-input {
+  border-color: rgba(148, 163, 184, 0.65);
+  background: rgba(15, 23, 42, 0.82);
+  color: #f8fafc !important;
+}
+
+html[data-theme] .login-page--dark .login-input::placeholder {
+  color: #94a3b8;
+}

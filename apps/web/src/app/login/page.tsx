@@ -57,7 +57,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="login-page min-h-screen">
+    <main className="login-page login-page--dark min-h-screen">
       <InteractiveLoginStage>
         <section className="login-panel w-full max-w-[440px] rounded-[1.75rem] border p-6 shadow-2xl sm:p-8" aria-labelledby="login-title">
           <div className="flex items-center gap-3">

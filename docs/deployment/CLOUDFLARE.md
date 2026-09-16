@@ -76,14 +76,35 @@ use o domínio público da API Railway.
 ## Publicação pelo repositório conectado
 
 Configure o projeto do Cloudflare Workers para usar a raiz do repositório e a
-branch `feat/admin-ui-cloudflare`. O comando de build é:
+branch `feat/admin-ui-cloudflare`. Como o Workers Builds separa a compilação da
+publicação, use estes comandos no painel:
+
+Build command:
 
 ```text
-pnpm install --frozen-lockfile && pnpm --dir apps/web run deploy
+pnpm install --frozen-lockfile && pnpm --dir apps/web exec opennextjs-cloudflare build && pnpm --dir apps/web run check:cloudflare
 ```
 
-O script executa, nessa ordem, o build OpenNext, a verificação de artefatos e a
-publicação no Worker com `--keep-vars`. Essa opção preserva as variáveis de
+Preview deploy command:
+
+```text
+pnpm --dir apps/web exec wrangler versions upload
+```
+
+Production deploy command:
+
+```text
+pnpm --dir apps/web exec wrangler deploy --keep-vars
+```
+
+O `wrangler` também está declarado na raiz do workspace para que o comando
+padrão de preview do Cloudflare (`npx wrangler versions upload`) funcione caso
+o painel seja deixado com o valor padrão. A forma explícita com `pnpm --dir`
+evita depender do diretório de trabalho escolhido pelo Workers Builds.
+
+Para uma publicação manual fora do Workers Builds, o script `deploy` do pacote
+continua executando, nessa ordem, o build OpenNext, a verificação de artefatos e
+a publicação no Worker com `--keep-vars`. Essa opção preserva as variáveis de
 runtime configuradas pelo painel do Cloudflare durante novos deploys. O
 `check:cloudflare` interrompe a publicação se
 `.open-next/worker.js` ou `.open-next/assets` não existirem ou se arquivos

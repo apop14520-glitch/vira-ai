@@ -11,9 +11,11 @@
     "build:web": "npm --workspace @vira-ai/web run build",
     "test:api": "python -m pytest apps/api/tests"
   },
+  "devDependencies": {
+    "wrangler": "^4.131.2"
+  },
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
   }
 }
-

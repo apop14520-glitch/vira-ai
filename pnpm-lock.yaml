@@ -6,7 +6,11 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    devDependencies:
+      wrangler:
+        specifier: ^4.131.2
+        version: 4.131.2(@types/node@22.20.1)
 
   apps/web:
     dependencies:

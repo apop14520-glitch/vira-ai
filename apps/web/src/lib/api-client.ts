@@ -23,6 +23,7 @@ export class ApiClientError extends Error {
 
 function safeMessage(status: number, path: string): string {
   if (status === 401 && path === "/api/v1/auth/login") return "Usuário ou senha inválidos.";
+  if (status === 401 && path === "/api/v1/auth/setup") return "Código de ativação inválido.";
   if (status === 401) return "Sua sessão expirou. Entre novamente para continuar.";
   if (status === 403) return "Você não tem permissão para realizar esta ação.";
   if (status === 404) return "O recurso solicitado não foi encontrado.";

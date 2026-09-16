@@ -55,6 +55,17 @@ describe("cliente same-origin", () => {
     });
   });
 
+  it("explica código de ativação inválido sem expor detalhes internos", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ error: { message: "detalhe interno" } }), { status: 401 }),
+    );
+
+    await expect(apiRequest("/api/v1/auth/setup", { method: "POST" })).rejects.toMatchObject({
+      status: 401,
+      message: "Código de ativação inválido.",
+    });
+  });
+
   it("explica que a ativação já foi concluída sem expor o corpo interno", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ error: { message: "segredo interno" } }), { status: 409 }),

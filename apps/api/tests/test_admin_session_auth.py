@@ -176,6 +176,33 @@ def test_initial_setup_requires_a_configured_token(initial_setup_service) -> Non
         )
 
 
+def test_initial_setup_rejects_an_incorrect_unicode_token_without_type_error(initial_setup_service) -> None:
+    service, _ = initial_setup_service
+
+    with pytest.raises(InitialSetupRejected, match="não pôde ser concluída"):
+        service.create_initial_credential(
+            "novo-admin",
+            "Senha-segura-2026!",
+            "Senha-segura-2026!",
+            "código-incorreto-🔒",
+        )
+
+
+def test_initial_setup_accepts_the_correct_configured_unicode_token(initial_setup_service) -> None:
+    service, _ = initial_setup_service
+    unicode_token = "código-ativação-seguro-🔒"
+    service.settings.admin_setup_token = unicode_token
+
+    credential = service.create_initial_credential(
+        "novo-admin",
+        "Senha-segura-2026!",
+        "Senha-segura-2026!",
+        unicode_token,
+    )
+
+    assert service.authenticate("novo-admin", "Senha-segura-2026!") == credential
+
+
 def test_service_creates_and_resolves_an_active_session(identity_service) -> None:
     service, _, _ = identity_service
     credential = service.ensure_initial_credential()

@@ -107,7 +107,7 @@ class AdminSessionService:
         expected_token = self._setup_token()
         if expected_token is None:
             raise InitialSetupNotConfigured("A ativação inicial não está configurada.")
-        if not hmac.compare_digest(setup_token, expected_token):
+        if not hmac.compare_digest(setup_token.encode("utf-8"), expected_token.encode("utf-8")):
             raise InitialSetupRejected("A ativação inicial não pôde ser concluída.")
         if password != confirmation:
             raise InitialSetupRejected("A ativação inicial não pôde ser concluída.")

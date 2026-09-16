@@ -250,8 +250,15 @@ body {
   scrollbar-gutter: stable;
 }
 
+.settings-panel--bounded {
+  height: min(760px, calc(100dvh - 4rem));
+  max-height: calc(100dvh - 4rem);
+  min-height: 0;
+}
+
 .settings-scroll {
   scrollbar-gutter: stable;
+  scrollbar-width: thin;
 }
 
 @keyframes liquid-float {

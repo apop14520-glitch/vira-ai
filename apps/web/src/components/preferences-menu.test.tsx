@@ -57,6 +57,19 @@ describe("PreferencesMenu", () => {
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Configurações do VIRA.AI" })).not.toBeInTheDocument());
   });
 
+  it("mantém a segurança dentro do painel com rolagem para conteúdo longo", async () => {
+    render(<PreferencesMenu />);
+    fireEvent.click(screen.getByRole("button", { name: "Configurações" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /Segurança/ }));
+    await waitFor(() => expect(screen.getByText("admin")).toBeInTheDocument());
+
+    const dialog = screen.getByRole("dialog", { name: "Configurações do VIRA.AI" });
+    const scrollRegion = dialog.querySelector(".settings-scroll");
+
+    expect(dialog).toHaveClass("settings-panel--bounded");
+    expect(scrollRegion).toHaveClass("overflow-y-auto", "pb-10");
+  });
+
   it("impede o envio quando a confirmação não corresponde à nova senha", async () => {
     render(<PreferencesMenu />);
     fireEvent.click(screen.getByRole("button", { name: "Configurações" }));

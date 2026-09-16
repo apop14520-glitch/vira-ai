@@ -48,6 +48,19 @@ Use a URL base sem `/login`, `/api` ou `/health`. Não crie
 Cloudflare Worker. Esses valores, quando necessários, pertencem ao serviço
 `vira-api` no Railway.
 
+Para criar o primeiro administrador pela página, configure
+`ADMIN_SETUP_TOKEN` **somente** como segredo no serviço `vira-api` do Railway,
+com `ADMIN_INITIAL_PASSWORD` vazio. Não inclua o código no Worker, no
+repositório nem em logs. `GET /api/v1/auth/setup-status` decide se `/login`
+mostra a ativação; `POST /api/v1/auth/setup` aceita os quatro campos e cria
+uma sessão HttpOnly. Depois da primeira credencial, o cadastro não pode ser
+repetido. Remova ou rotacione o código após a ativação.
+
+Antes da ativação, confirme que `DATABASE_URL` do `vira-api` aponta para um
+volume persistente no Railway. Um redeploy da API não deve recriar o banco nem
+apagar a credencial. Alterar `ADMIN_INITIAL_PASSWORD` posteriormente não
+redefine a senha já cadastrada.
+
 Depois de configurar a variável no painel, confirme que `API_INTERNAL_URL`
 aparece entre as variáveis e associações da versão ativa do Worker. A presença
 do valor apenas no histórico de versões não garante que a publicação em
@@ -96,15 +109,17 @@ Depois que o Cloudflare fornecer uma URL de preview, valide nesta ordem:
 
 1. `GET /login` exibe a tela de acesso.
 2. `GET /api/health` retorna o healthcheck da API Railway.
-3. Uma senha incorreta mostra apenas `Usuário ou senha inválidos.` e não cria
-   sessão.
-4. Um login válido cria o cookie HttpOnly e abre `/business`.
-5. O acompanhamento, a alteração de estágio, a exclusão de empresas e a
+3. Se não existir administrador, `/login` mostra a ativação inicial. Se já
+   existir, mostra o login; falha de conexão mantém o login utilizável.
+4. Uma senha incorreta mostra apenas `Usuário ou senha inválidos.` e não cria
+   sessão. Cadastro válido cria o cookie HttpOnly sem repetir a senha no login.
+5. Um login válido cria o cookie HttpOnly e abre `/business`.
+6. O acompanhamento, a alteração de estágio, a exclusão de empresas e a
    busca Foursquare funcionam por caminhos same-origin `/api/...`.
-6. O logout encerra a sessão; a próxima rota protegida volta a exigir login.
-7. O código-fonte do navegador e os assets públicos não contêm a origem da
+7. O logout encerra a sessão; a próxima rota protegida volta a exigir login.
+8. O código-fonte do navegador e os assets públicos não contêm a origem da
    API server-side, tokens, senha ou chave Foursquare.
-8. O Railway continua respondendo durante todos os testes.
+9. O Railway continua respondendo durante todos os testes.
 
 Se a API usar uma lista de CORS para alguma chamada direta adicional, inclua a
 origem pública ou de preview do frontend somente no serviço `vira-api`; o

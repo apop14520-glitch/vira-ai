@@ -70,6 +70,13 @@ entre com o usuário definido em `ADMIN_USERNAME` e troque a senha no menu
 superior, em `Configurações` → `Segurança`. Se a base local já tiver uma
 credencial criada, a variável de senha inicial não será reaplicada.
 
+Como alternativa para uma instalação sem administrador, deixe
+`ADMIN_INITIAL_PASSWORD` vazio e configure `ADMIN_SETUP_TOKEN` somente na API.
+Ao abrir `/login`, o formulário de ativação solicita usuário, senha com pelo
+menos 12 caracteres, confirmação e o código de ativação. Após a criação única,
+o sistema abre a sessão e a página volta ao login normal. O código não é a
+senha administrativa e deve ser removido ou rotacionado após a ativação.
+
 ### Sistema web inicial
 
 O painel web possui as seguintes áreas navegáveis:
@@ -129,6 +136,7 @@ No serviço `vira-api`, use os nomes canônicos abaixo:
 ```text
 ADMIN_USERNAME=admin
 ADMIN_INITIAL_PASSWORD=<senha inicial exclusiva com pelo menos 12 caracteres>
+# Alternativa à senha inicial: ADMIN_SETUP_TOKEN=<código aleatório exclusivo>
 ENVIRONMENT=production
 API_ACCESS_TOKEN=<token de integração da API>
 ADMIN_ACCESS_TOKEN=<token administrativo diferente>
@@ -147,6 +155,13 @@ terminar em `/login`, `/api` ou `/health`. Os tokens não são a senha do
 formulário de login. `ADMIN_INITIAL_PASSWORD` serve somente para criar a
 primeira credencial; se uma credencial já existir no banco persistido, ela não
 será substituída automaticamente.
+
+Para usar a ativação pela página, defina `ADMIN_SETUP_TOKEN` no serviço
+`vira-api` do Railway e deixe `ADMIN_INITIAL_PASSWORD` sem valor. Nunca defina
+o código, usuário ou senha no Worker Cloudflare. Confirme que `DATABASE_URL`
+aponta para um volume persistente no Railway antes de cadastrar o primeiro
+administrador; um novo deploy da API não deve apagar a credencial. Remova ou
+rotacione o código de ativação após o primeiro acesso.
 
 Por compatibilidade com uma configuração antiga, o backend também reconhece
 `SENHA_INICIAL_DO_ADMINISTRADOR`, `NOME_DE_USUÁRIO_DO_ADMINISTRADOR`,

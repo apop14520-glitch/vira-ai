@@ -40,6 +40,18 @@ describe("LoginPage", () => {
     expect(screen.queryByLabelText("Código de ativação")).not.toBeInTheDocument();
   });
 
+  it("preserva exatamente o usuário digitado no celular", async () => {
+    mocks.getInitialSetupStatus.mockResolvedValue({ required: false, configured: true });
+    render(<LoginPage />);
+
+    await screen.findByRole("heading", { name: "Entrar no painel" });
+
+    const username = screen.getByLabelText("Usuário");
+    expect(username).toHaveAttribute("autocapitalize", "none");
+    expect(username).toHaveAttribute("autocorrect", "off");
+    expect(username).toHaveAttribute("spellcheck", "false");
+  });
+
   it("mantém a tela de acesso isolada no tema azul escuro", async () => {
     mocks.getInitialSetupStatus.mockResolvedValue({ required: false, configured: true });
     render(<LoginPage />);

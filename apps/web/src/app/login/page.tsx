@@ -76,7 +76,7 @@ export default function LoginPage() {
           <form onSubmit={submit} className="mt-7 space-y-4">
             <div>
               <label htmlFor="admin-username" className="text-sm font-semibold text-slate-200">Usuário</label>
-              <input id="admin-username" name="username" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" placeholder="Digite o usuário configurado" required className="login-input mt-2" />
+              <input id="admin-username" name="username" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="Digite o usuário configurado" required className="login-input mt-2" />
             </div>
             <div>
               <label htmlFor="admin-password" className="text-sm font-semibold text-slate-200">Senha</label>

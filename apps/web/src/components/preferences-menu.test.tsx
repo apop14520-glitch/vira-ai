@@ -43,9 +43,12 @@ describe("PreferencesMenu", () => {
 
   it("apresenta somente as três áreas principais sem densidade", async () => {
     render(<PreferencesMenu />);
-    fireEvent.click(screen.getByRole("button", { name: "Configurações" }));
+    const trigger = screen.getByRole("button", { name: "Configurações" });
+    fireEvent.click(trigger);
 
     await waitFor(() => {
+      expect(trigger).toHaveAttribute("aria-expanded", "true");
+      expect(trigger).toHaveAttribute("aria-controls", "vira-preferences-panel");
       expect(screen.getAllByRole("menuitem")).toHaveLength(3);
       expect(screen.getByRole("menuitem", { name: /Aparência/ })).toBeInTheDocument();
       expect(screen.getByRole("menuitem", { name: /Conexões/ })).toBeInTheDocument();

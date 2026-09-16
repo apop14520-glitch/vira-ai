@@ -18,6 +18,15 @@ describe("contrato de build Cloudflare", () => {
     expect(packageJson.devDependencies?.wrangler).toBeTruthy();
   });
 
+  it("disponibiliza o Wrangler na raiz para o deploy padrão dos Workers Builds", () => {
+    const rootPackagePath = resolve(process.cwd(), "../../package.json");
+    const rootPackage = JSON.parse(readFileSync(rootPackagePath, "utf8")) as {
+      devDependencies?: Record<string, string>;
+    };
+
+    expect(rootPackage.devDependencies?.wrangler).toBeTruthy();
+  });
+
   it("verifica artefatos antes de publicar", () => {
     const packagePath = resolve(process.cwd(), "package.json");
     const packageJson = JSON.parse(readFileSync(packagePath, "utf8")) as { scripts?: Record<string, string> };
@@ -43,6 +52,7 @@ describe("contrato de build Cloudflare", () => {
       "API_INTERNAL_URL",
       "vira-api-production.up.railway.app",
       "feat/admin-ui-cloudflare",
+      "pnpm --dir apps/web exec wrangler versions upload",
       "rollback",
       "railway.internal",
     ]) {

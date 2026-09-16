@@ -246,6 +246,9 @@ body {
 }
 
 .settings-panel {
+  position: fixed;
+  top: var(--settings-top, 4.5rem);
+  right: var(--settings-right, 1rem);
   max-height: min(760px, calc(100dvh - 1.25rem));
   scrollbar-gutter: stable;
 }

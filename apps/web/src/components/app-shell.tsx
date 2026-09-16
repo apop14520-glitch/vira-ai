@@ -82,7 +82,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
           </aside>
         </>}
 
-        <main className="mx-auto max-w-[1440px] px-4 py-7 sm:px-6 sm:py-10 lg:px-8">{children}</main>
+        <main className="mx-auto max-w-[1440px] px-4 pb-7 pt-0 sm:px-6 sm:py-10 lg:px-8">{children}</main>
         <SystemStatus />
       </div>
     </AuthGate>

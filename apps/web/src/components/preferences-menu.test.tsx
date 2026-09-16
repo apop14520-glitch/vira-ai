@@ -57,6 +57,14 @@ describe("PreferencesMenu", () => {
     });
   });
 
+  it("mantém o painel fora do cabeçalho para não ser cortado no celular", async () => {
+    render(<PreferencesMenu />);
+    fireEvent.click(screen.getByRole("button", { name: "Configurações" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Configurações do VIRA.AI" });
+    expect(dialog.parentElement).toBe(document.body);
+  });
+
   it("reutiliza a sessão validada pelo AuthGate sem fazer uma segunda consulta", async () => {
     render(<PreferencesMenu />);
     fireEvent.click(screen.getByRole("button", { name: "Configurações" }));

@@ -48,6 +48,11 @@ Use a URL base sem `/login`, `/api` ou `/health`. Não crie
 Cloudflare Worker. Esses valores, quando necessários, pertencem ao serviço
 `vira-api` no Railway.
 
+Depois de configurar a variável no painel, confirme que `API_INTERNAL_URL`
+aparece entre as variáveis e associações da versão ativa do Worker. A presença
+do valor apenas no histórico de versões não garante que a publicação em
+produção consiga encaminhar requisições para a API.
+
 Não use `vira-api.railway.internal` nessa configuração. Um domínio
 `railway.internal` é privado à rede do Railway e não é resolvível pelo
 navegador nem por um Worker Cloudflare externo. Para esta topologia híbrida,
@@ -63,7 +68,9 @@ pnpm install --frozen-lockfile && pnpm --dir apps/web run deploy
 ```
 
 O script executa, nessa ordem, o build OpenNext, a verificação de artefatos e a
-publicação no Worker. O `check:cloudflare` interrompe a publicação se
+publicação no Worker com `--keep-vars`. Essa opção preserva as variáveis de
+runtime configuradas pelo painel do Cloudflare durante novos deploys. O
+`check:cloudflare` interrompe a publicação se
 `.open-next/worker.js` ou `.open-next/assets` não existirem ou se arquivos
 textuais emitidos contiverem nomes/valores com formato de credencial.
 

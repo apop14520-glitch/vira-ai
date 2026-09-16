@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { copySetCookieHeaders, resolveApiOrigin, resolveUpstreamPath } from "@/app/api/proxy-utils";
+import { copySetCookieHeaders, resolveConfiguredApiOrigin, resolveUpstreamPath } from "@/app/api/proxy-utils";
 
 function forwardHeaders(request: NextRequest): Headers {
   const headers = new Headers();
@@ -18,7 +18,10 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
 
   let target: URL;
   try {
-    target = new URL(upstreamPath, resolveApiOrigin(process.env.API_INTERNAL_URL, process.env.NODE_ENV));
+    target = new URL(
+      upstreamPath,
+      resolveConfiguredApiOrigin(process.env.API_INTERNAL_URL, process.env.URL_INTERNA_DA_API, process.env.NODE_ENV),
+    );
   } catch {
     return NextResponse.json({ error: { code: "UPSTREAM_UNAVAILABLE", message: "A API local não está disponível." } }, { status: 502 });
   }

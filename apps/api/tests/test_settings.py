@@ -41,3 +41,17 @@ def test_canonical_variable_names_take_precedence_over_compatibility_aliases(mon
     assert settings.admin_username == "canonical-admin"
     assert settings.environment == "test"
     assert settings.cors_origins == "https://canonical.example"
+
+
+def test_settings_accepts_legacy_admin_token_and_organization_names(monkeypatch) -> None:
+    monkeypatch.delenv("ADMIN_ACCESS_TOKEN", raising=False)
+    monkeypatch.delenv("AUTH_ORGANIZATION_ID", raising=False)
+    monkeypatch.setenv("TOKEN_DE_ACESSO_DE_ADMINISTRADOR", "legacy-admin-token")
+    monkeypatch.setenv("ID_DA_ORGANIZAÇÃO_AUTENTICADA", "00000000-0000-4000-8000-000000000001")
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("API_ACCESS_TOKEN", "api-token")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.admin_access_token.get_secret_value() == "legacy-admin-token"
+    assert str(settings.auth_organization_id) == "00000000-0000-4000-8000-000000000001"

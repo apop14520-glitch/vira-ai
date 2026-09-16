@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { copySetCookieHeaders, resolveApiOrigin, resolveUpstreamPath } from "@/app/api/proxy-utils";
+import { copySetCookieHeaders, resolveApiOrigin, resolveConfiguredApiOrigin, resolveUpstreamPath } from "@/app/api/proxy-utils";
 
 describe("contrato do proxy Cloudflare", () => {
   it("converte login para a rota de API correspondente", () => {
@@ -31,6 +31,13 @@ describe("contrato do proxy Cloudflare", () => {
 
   it("mantém o fallback local apenas fora da produção", () => {
     expect(resolveApiOrigin(undefined, "development").toString()).toBe("http://127.0.0.1:8000/");
+  });
+
+  it("aceita a variável legada da URL somente como compatibilidade", () => {
+    expect(resolveConfiguredApiOrigin(undefined, "https://vira-api-production.up.railway.app", "production").origin)
+      .toBe("https://vira-api-production.up.railway.app");
+    expect(resolveConfiguredApiOrigin("https://canonical.example", "https://legacy.example", "production").origin)
+      .toBe("https://canonical.example");
   });
 
   it("copia todos os cookies de sessão para a resposta", () => {

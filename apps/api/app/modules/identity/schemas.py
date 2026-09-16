@@ -17,6 +17,20 @@ class LoginResponse(BaseModel):
     username: str
 
 
+class InitialSetupRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    username: str = Field(min_length=1, max_length=128)
+    password: str = Field(min_length=1, max_length=512)
+    confirmation: str = Field(min_length=1, max_length=512)
+    setup_token: str = Field(min_length=1, max_length=512)
+
+
+class InitialSetupStatusResponse(BaseModel):
+    required: bool
+    configured: bool
+
+
 class SessionResponse(BaseModel):
     authenticated: Literal[True]
     username: str

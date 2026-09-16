@@ -1,5 +1,7 @@
 const allowedAuthPaths = new Set([
   "/v1/auth/login",
+  "/v1/auth/setup-status",
+  "/v1/auth/setup",
   "/v1/auth/session",
   "/v1/auth/logout",
   "/v1/auth/password",

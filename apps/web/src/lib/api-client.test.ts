@@ -54,4 +54,33 @@ describe("cliente same-origin", () => {
       retryAfter: 12,
     });
   });
+
+  it("explica que a ativação já foi concluída sem expor o corpo interno", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ error: { message: "segredo interno" } }), { status: 409 }),
+    );
+
+    await expect(apiRequest("/api/v1/auth/setup", { method: "POST" })).rejects.toMatchObject({
+      status: 409,
+      message: "O acesso administrativo já foi criado. Entre com suas credenciais.",
+    });
+  });
+
+  it("explica quando o código de ativação não foi configurado", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 412 }));
+
+    await expect(apiRequest("/api/v1/auth/setup", { method: "POST" })).rejects.toMatchObject({
+      status: 412,
+      message: "O código de ativação ainda não foi configurado no servidor.",
+    });
+  });
+
+  it("mantém a mensagem segura de indisponibilidade no setup", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 502 }));
+
+    await expect(apiRequest("/api/v1/auth/setup", { method: "POST" })).rejects.toMatchObject({
+      status: 502,
+      message: "O serviço está temporariamente indisponível.",
+    });
+  });
 });

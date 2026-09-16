@@ -9,6 +9,23 @@ export type AdminSession = {
 };
 
 export type LoginResponse = { authenticated: true; username: string };
+export type InitialSetupStatus = { required: boolean; configured: boolean };
+
+export function getInitialSetupStatus(): Promise<InitialSetupStatus> {
+  return apiJson<InitialSetupStatus>("/api/v1/auth/setup-status");
+}
+
+export function setupInitialAdmin(
+  username: string,
+  password: string,
+  confirmation: string,
+  setupToken: string,
+): Promise<LoginResponse> {
+  return apiJson<LoginResponse>("/api/v1/auth/setup", {
+    method: "POST",
+    body: JSON.stringify({ username, password, confirmation, setup_token: setupToken }),
+  });
+}
 
 export async function getSession(): Promise<AdminSession | null> {
   try {

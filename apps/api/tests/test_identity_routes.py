@@ -17,6 +17,8 @@ from app.settings import Settings
 INITIAL_PASSWORD = "Vira-admin-2026!"
 NEW_PASSWORD = "Vira-nova-2026!"
 ORGANIZATION_ID = UUID("00000000-0000-4000-8000-000000000001")
+SETUP_TOKEN = "codigo-ativacao-seguro-2026"
+SETUP_PASSWORD = "Senha-segura-2026!"
 
 
 @pytest.fixture
@@ -59,6 +61,150 @@ def identity_client(tmp_path) -> Iterator[tuple[TestClient, Settings]]:
             for name, value in previous.items():
                 setattr(app.state, name, value)
     database.close()
+
+
+@pytest.fixture
+def setup_client(tmp_path) -> Iterator[tuple[TestClient, Settings]]:
+    database = SQLiteDatabase(f"sqlite:///{(tmp_path / 'identity-setup-routes.db').as_posix()}")
+    database.initialize()
+    repository = SQLiteIdentityRepository(database)
+    repository.initialize_schema()
+    settings = Settings(
+        environment="development",
+        allow_development_auth_bypass=False,
+        admin_initial_password=None,
+        admin_setup_token=SETUP_TOKEN,
+        auth_organization_id=ORGANIZATION_ID,
+        admin_session_cookie_name="vira_admin_session",
+    )
+    service = AdminSessionService(
+        credential_repository=repository,
+        session_repository=repository,
+        settings=settings,
+        clock=lambda: datetime(2026, 9, 15, 12, 0, tzinfo=UTC),
+        token_generator=lambda: f"raw-setup-session-{uuid4().hex}",
+    )
+
+    with TestClient(app) as client:
+        previous = {
+            "settings": getattr(app.state, "settings", None),
+            "identity": getattr(app.state, "identity", None),
+            "admin_sessions": getattr(app.state, "admin_sessions", None),
+            "identity_rate_limiter": getattr(app.state, "identity_rate_limiter", None),
+        }
+        app.state.settings = settings
+        app.state.identity = repository
+        app.state.admin_sessions = service
+        app.state.identity_rate_limiter = SlidingWindowRateLimiter(5, 60)
+        try:
+            yield client, settings
+        finally:
+            for name, value in previous.items():
+                setattr(app.state, name, value)
+    database.close()
+
+
+def _setup_payload(**overrides: str) -> dict[str, str]:
+    payload = {
+        "username": "novo-admin",
+        "password": SETUP_PASSWORD,
+        "confirmation": SETUP_PASSWORD,
+        "setup_token": SETUP_TOKEN,
+    }
+    payload.update(overrides)
+    return payload
+
+
+def test_initial_setup_status_changes_after_successful_setup(setup_client) -> None:
+    client, _ = setup_client
+
+    initial = client.get("/api/v1/auth/setup-status")
+    created = client.post("/api/v1/auth/setup", json=_setup_payload())
+    completed = client.get("/api/v1/auth/setup-status")
+
+    assert initial.status_code == 200
+    assert initial.json() == {"required": True, "configured": True}
+    assert created.status_code == 200
+    assert created.json() == {"authenticated": True, "username": "novo-admin"}
+    assert "httponly" in created.headers["set-cookie"].lower()
+    assert completed.json() == {"required": False, "configured": True}
+    assert client.get("/api/v1/auth/session").status_code == 200
+
+
+def test_initial_setup_rejects_invalid_token_without_exposing_secrets(setup_client) -> None:
+    client, _ = setup_client
+
+    response = client.post(
+        "/api/v1/auth/setup",
+        json=_setup_payload(setup_token="codigo-incorreto-secreto"),
+    )
+
+    assert response.status_code == 401
+    assert SETUP_TOKEN not in response.text
+    assert "codigo-incorreto-secreto" not in response.text
+    assert SETUP_PASSWORD not in response.text
+
+
+def test_initial_setup_returns_conflict_after_first_credential(setup_client) -> None:
+    client, _ = setup_client
+    assert client.post("/api/v1/auth/setup", json=_setup_payload()).status_code == 200
+
+    response = client.post(
+        "/api/v1/auth/setup",
+        json=_setup_payload(username="segundo-admin"),
+    )
+
+    assert response.status_code == 409
+
+
+def test_initial_setup_requires_runtime_token(setup_client) -> None:
+    client, settings = setup_client
+    settings.admin_setup_token = None
+
+    status = client.get("/api/v1/auth/setup-status")
+    response = client.post("/api/v1/auth/setup", json=_setup_payload())
+
+    assert status.json() == {"required": True, "configured": False}
+    assert response.status_code == 412
+
+
+def test_initial_setup_rate_limit_returns_retry_after(setup_client) -> None:
+    client, _ = setup_client
+    app.state.identity_rate_limiter = SlidingWindowRateLimiter(1, 60)
+
+    first = client.post("/api/v1/auth/setup", json=_setup_payload(setup_token="incorreto-1"))
+    second = client.post("/api/v1/auth/setup", json=_setup_payload(setup_token="incorreto-2"))
+
+    assert first.status_code == 401
+    assert second.status_code == 429
+    assert int(second.headers["retry-after"]) >= 1
+
+
+def test_initial_setup_audit_contains_no_secrets(setup_client) -> None:
+    client, _ = setup_client
+    request_id = f"identity-audit-setup-{uuid4().hex[:8]}"
+
+    assert client.post(
+        "/api/v1/auth/setup",
+        json=_setup_payload(),
+        headers={"X-Request-ID": request_id},
+    ).status_code == 200
+
+    with app.state.company_leads.database.connect() as connection:
+        event = connection.execute(
+            """
+            SELECT action, request_id, metadata_json
+            FROM business_audit_events
+            WHERE request_id = ?
+            """,
+            (request_id,),
+        ).fetchone()
+
+    assert event["action"] == "admin_initial_setup_succeeded"
+    assert event["request_id"] == request_id
+    assert event["metadata_json"] == "{}"
+    assert SETUP_TOKEN not in event["metadata_json"]
+    assert SETUP_PASSWORD not in event["metadata_json"]
 
 
 def test_login_sets_a_protected_cookie_and_session_is_readable(identity_client) -> None:

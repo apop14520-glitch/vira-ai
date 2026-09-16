@@ -23,36 +23,24 @@ export function SystemStatus() {
   }, []);
 
   const copy = {
-    checking: { label: "Verificando", detail: "Consultando a API local", dot: "bg-amber-300 animate-pulse" },
-    online: { label: "Disponível", detail: "Verificação respondendo", dot: "bg-emerald-300" },
-    offline: { label: "Indisponível", detail: "Inicie a API local para conectar", dot: "bg-slate-500" },
+    checking: { label: "verificando", dot: "bg-amber-300 animate-pulse", tone: "text-amber-300" },
+    online: { label: "disponível", dot: "bg-emerald-300", tone: "text-emerald-300" },
+    offline: { label: "indisponível", dot: "bg-slate-500", tone: "text-slate-400" },
   }[state];
 
   return (
-    <aside className="h-fit rounded-2xl border border-slate-800 bg-slate-900/45 p-4 xl:mt-10 sm:p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Sistema</p>
-          <h2 className="mt-2 text-lg font-semibold text-white">Saúde da plataforma</h2>
-        </div>
-        <span className={`mt-1 h-2.5 w-2.5 rounded-full ${copy.dot}`} />
+    <footer className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-slate-800/80 px-4 py-5 text-xs sm:px-6 lg:px-8" aria-label="Informações do sistema">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-slate-500">
+        <span className="font-semibold text-slate-300">© 2026 VIRA.AI</span>
+        <span aria-hidden="true">·</span>
+        <span>Ambiente de desenvolvimento</span>
+        <span aria-hidden="true">·</span>
+        <span>v0.1</span>
       </div>
-      <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4 sm:mt-6">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-sm text-slate-300">{service}</span>
-          <span className={`text-xs font-medium ${state === "online" ? "text-emerald-300" : state === "checking" ? "text-amber-300" : "text-slate-500"}`}>{copy.label}</span>
-        </div>
-        <p className="mt-2 text-xs leading-5 text-slate-500">{copy.detail}</p>
+      <div className="flex items-center gap-2" aria-live="polite" aria-label={`${service}: API ${copy.label}`}>
+        <span className={`h-2 w-2 rounded-full ${copy.dot}`} aria-hidden="true" />
+        <span className={copy.tone}>API {copy.label}</span>
       </div>
-      <div className="mt-5 space-y-3 text-xs">
-        <StatusRow label="API versionada" value="/api/v1/" />
-        <StatusRow label="Banco local" value="SQLite" />
-        <StatusRow label="Provedores de IA" value="Preparados" />
-      </div>
-    </aside>
+    </footer>
   );
-}
-
-function StatusRow({ label, value }: { label: string; value: string }) {
-  return <div className="flex items-center justify-between gap-3"><span className="text-slate-500">{label}</span><span className="text-slate-300">{value}</span></div>;
 }

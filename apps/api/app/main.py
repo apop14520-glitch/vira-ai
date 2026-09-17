@@ -15,6 +15,7 @@ from app.api.v1.router import router as v1_router
 from app.db.factory import create_database
 from app.modules.business.repository import SQLiteCompanyLeadRepository
 from app.modules.business.places import FoursquarePlacesService
+from app.modules.concursos.repository import SQLiteConcursosRepository
 from app.modules.identity.repository import SQLiteIdentityRepository
 from app.observability.logging import configure_logging
 from app.security.rate_limit import SlidingWindowRateLimiter
@@ -51,6 +52,8 @@ async def lifespan(application: FastAPI):
     database.initialize()
     company_leads = SQLiteCompanyLeadRepository(database)
     company_leads.initialize_schema()
+    concursos = SQLiteConcursosRepository(database)
+    concursos.initialize_schema()
     identity = SQLiteIdentityRepository(database)
     identity.initialize_schema()
     admin_sessions = AdminSessionService(
@@ -61,6 +64,7 @@ async def lifespan(application: FastAPI):
     admin_sessions.ensure_initial_credential()
     application.state.settings = settings
     application.state.company_leads = company_leads
+    application.state.concursos = concursos
     application.state.identity = identity
     application.state.admin_sessions = admin_sessions
     application.state.foursquare_places = FoursquarePlacesService(

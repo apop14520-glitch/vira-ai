@@ -1,7 +1,7 @@
-import { ModulePage } from "@/components/module-page";
-import { productModules } from "@/lib/modules";
+import { ConcursosDashboard } from "@/components/concursos-dashboard";
+import { AppShell } from "@/components/app-shell";
 
 export default function ConcursosPage() {
-  return <ModulePage module={productModules.find((module) => module.slug === "concursos")!} />;
+  return <AppShell><ConcursosDashboard /></AppShell>;
 }
 

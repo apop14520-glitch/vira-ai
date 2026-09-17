@@ -24,4 +24,5 @@ Não publique detalhes de uma vulnerabilidade antes de uma correção ou coorden
 ## Referências internas
 
 - [`docs/security/SECURITY_ARCHITECTURE.md`](docs/security/SECURITY_ARCHITECTURE.md)
+- [`docs/security/semgrep.md`](docs/security/semgrep.md)
 - [`docs/privacy/LGPD.md`](docs/privacy/LGPD.md)

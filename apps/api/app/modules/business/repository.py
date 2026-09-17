@@ -108,9 +108,12 @@ class SQLiteCompanyLeadRepository:
     def _ensure_column(connection: sqlite3.Connection, table: str, column: str, definition: str) -> None:
         """Apply additive local migrations without rewriting existing development data."""
 
-        columns = {row["name"] for row in connection.execute(f"PRAGMA table_info({table})").fetchall()}
+        # table/column/definition are always literal strings from initialize_schema() in this
+        # same file, never user input; SQLite has no placeholder syntax for identifiers anyway,
+        # so string formatting is the standard way to run additive DDL migrations.
+        columns = {row["name"] for row in connection.execute(f"PRAGMA table_info({table})").fetchall()}  # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
         if column not in columns:
-            connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+            connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")  # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
 
     @staticmethod
     def _backfill_lead_numbers(connection: sqlite3.Connection) -> None:
@@ -302,7 +305,9 @@ class SQLiteCompanyLeadRepository:
             search = f"%{self._normalized(query)}%"
             values.extend([search, search, search])
         with self.database.connect() as connection:
-            rows = connection.execute(
+            # Only the fixed clause strings above (never user input) are interpolated into the
+            # query text; every actual value goes through `values` as a bound `?` parameter.
+            rows = connection.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
                 f"SELECT * FROM business_company_leads WHERE {' AND '.join(clauses)} ORDER BY updated_at DESC", values
             ).fetchall()
         return [self._from_row(row) for row in rows]

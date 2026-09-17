@@ -236,7 +236,9 @@ class SQLiteConcursosRepository:
             clauses.append("topic_id = ?")
             values.append(str(topic_id))
         with self.database.connect() as connection:
-            rows = connection.execute(
+            # Only the fixed clause strings above (never user input) are interpolated into the
+            # query text; every actual value goes through `values` as a bound `?` parameter.
+            rows = connection.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
                 f"SELECT * FROM concursos_questions WHERE {' AND '.join(clauses)} ORDER BY created_at DESC", values
             ).fetchall()
         return [self._question_from_row(row) for row in rows]

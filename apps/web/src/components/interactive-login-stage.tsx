@@ -46,7 +46,7 @@ export function InteractiveLoginStage({ children }: Readonly<{ children: ReactNo
           <span className="liquid-logo-mark" />
         </div>
         <div className="liquid-logo-reveal" aria-hidden="true">
-          <img className="liquid-logo-mark" src="/brand/logo.png" alt="" draggable={false} />
+          <img className="liquid-logo-mark" src="/brand/vira.png" alt="" draggable={false} />
         </div>
         <span className="liquid-surface" />
       </div>

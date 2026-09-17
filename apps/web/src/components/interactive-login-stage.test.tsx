@@ -16,7 +16,7 @@ describe("InteractiveLoginStage", () => {
     const logo = revealLayer?.querySelector<HTMLImageElement>(".liquid-logo-mark");
     expect(revealLayer).toHaveAttribute("aria-hidden", "true");
     expect(gradientLayer).toHaveAttribute("aria-hidden", "true");
-    expect(logo).toHaveAttribute("src", "/brand/logo.png");
+    expect(logo).toHaveAttribute("src", "/brand/vira.png");
     expect(logo).toHaveClass("liquid-logo-mark");
   });
 

@@ -27,6 +27,19 @@ describe("contrato de build Cloudflare", () => {
     expect(rootPackage.devDependencies?.wrangler).toBeTruthy();
   });
 
+  it("disponibiliza a configuração-raiz para o comando padrão do Cloudflare", () => {
+    const rootWranglerPath = resolve(process.cwd(), "../../wrangler.jsonc");
+    const rootWrangler = JSON.parse(readFileSync(rootWranglerPath, "utf8")) as {
+      main?: string;
+      assets?: { directory?: string };
+      vars?: Record<string, string>;
+    };
+
+    expect(rootWrangler.main).toBe("apps/web/.open-next/worker.js");
+    expect(rootWrangler.assets?.directory).toBe("apps/web/.open-next/assets");
+    expect(rootWrangler.vars?.API_INTERNAL_URL).toBe("https://vira-api-production.up.railway.app");
+  });
+
   it("verifica artefatos antes de publicar", () => {
     const packagePath = resolve(process.cwd(), "package.json");
     const packageJson = JSON.parse(readFileSync(packagePath, "utf8")) as { scripts?: Record<string, string> };

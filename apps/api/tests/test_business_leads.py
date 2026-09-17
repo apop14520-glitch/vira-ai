@@ -86,6 +86,32 @@ def test_duplicate_company_and_city_is_rejected() -> None:
         assert duplicated.json()["error"]["code"] == "HTTP_ERROR"
 
 
+def test_audit_log_records_lead_lifecycle_events() -> None:
+    suffix = uuid4().hex[:8]
+    payload = {
+        "company_name": f"Empresa Auditada {suffix}",
+        "segment": "Serviços",
+        "city": "Manaus",
+        "state": "AM",
+        "source": "teste automatizado",
+    }
+    with TestClient(app) as client:
+        created = client.post("/api/v1/business/leads", json=payload).json()
+
+        moved = client.patch(
+            f"/api/v1/business/leads/{created['id']}/status",
+            json={"status": "qualificado", "version": created["version"]},
+        )
+        assert moved.status_code == 200
+
+        events = client.get("/api/v1/business/audit")
+        assert events.status_code == 200
+        actions = [event["action"] for event in events.json()]
+        assert "company_lead.created" in actions
+        assert "company_lead.status_updated" in actions
+        assert all("api_key" not in event["metadata"] for event in events.json())
+
+
 def test_foursquare_is_disabled_until_a_key_is_configured() -> None:
     with TestClient(app) as client:
         configuration = client.get("/api/v1/business/integrations/foursquare")

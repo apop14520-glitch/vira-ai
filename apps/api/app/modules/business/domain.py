@@ -107,3 +107,16 @@ class CompanyLead(BaseModel):
 class BusinessSummary(BaseModel):
     total: int
     by_status: dict[LeadStatus, int]
+
+
+class AuditEvent(BaseModel):
+    """Read-only, privacy-safe projection of a recorded audit event."""
+
+    id: UUID
+    actor_id: str
+    action: str
+    resource_type: str
+    resource_id: str
+    occurred_at: datetime
+    outcome: str
+    metadata: dict[str, object]

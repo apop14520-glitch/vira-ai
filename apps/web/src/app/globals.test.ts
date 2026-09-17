@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -18,12 +18,30 @@ describe("layout responsivo do painel de configurações", () => {
 
   it("mantém o fundo azul contínuo sem uma moldura preta no login", () => {
     const css = readFileSync(resolve(process.cwd(), "src/app/globals.css"), "utf8");
-    const darkLogin = css.match(/html\[data-theme\] \.login-page--dark \{[\s\S]*?\n\}/)?.[0];
-    const darkLoginOverlay = css.match(/html\[data-theme\] \.login-page--dark::after \{[\s\S]*?\n\}/)?.[0];
-    const darkLoginStage = css.match(/html\[data-theme\] \.login-page--dark \.login-stage \{[\s\S]*?\n\}/)?.[0];
+    const darkLogin = css.match(/(?:^|\n)\.login-page--dark \{[\s\S]*?\n\}/)?.[0];
+    const darkLoginOverlay = css.match(/(?:^|\n)\.login-page--dark::after \{[\s\S]*?\n\}/)?.[0];
+    const darkLoginStage = css.match(/(?:^|\n)\.login-page--dark \.login-stage \{[\s\S]*?\n\}/)?.[0];
 
     expect(darkLogin).toContain("linear-gradient(135deg, #061a36 0%, #0b2a4b 52%, #062b3f 100%)");
     expect(darkLoginOverlay).toContain("background: transparent;");
     expect(darkLoginStage).toContain("background: transparent;");
+  });
+
+  it("usa a logo transparente fornecida como fundo do efeito líquido", () => {
+    const css = readFileSync(resolve(process.cwd(), "src/app/globals.css"), "utf8");
+
+    expect(existsSync(resolve(process.cwd(), "public/brand/vira.png"))).toBe(true);
+    expect(css).toContain('background: url("/brand/vira.png") center / contain no-repeat;');
+  });
+
+  it("faz o login ocupar a viewport sem bordas herdadas do body", () => {
+    const css = readFileSync(resolve(process.cwd(), "src/app/globals.css"), "utf8");
+    const darkLogin = css.match(/(?:^|\n)\.login-page--dark \{[\s\S]*?\n\}/)?.[0];
+    const darkLoginStage = css.match(/(?:^|\n)\.login-page--dark \.login-stage \{[\s\S]*?\n\}/)?.[0];
+
+    expect(darkLogin).toContain("min-height: 100dvh;");
+    expect(darkLogin).toContain("padding: 0;");
+    expect(darkLoginStage).toContain("min-height: 100%;");
+    expect(darkLoginStage).toContain("width: 100%;");
   });
 });

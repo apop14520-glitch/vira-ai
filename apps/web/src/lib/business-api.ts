@@ -26,6 +26,16 @@ export type BusinessSummary = { total: number; by_status: Record<LeadStatus, num
 export type CompanyLeadInput = Pick<CompanyLead, "company_name" | "segment" | "city" | "state" | "website" | "source" | "priority" | "temperature" | "external_place_id">;
 export type PlaceResult = { place_id: string; name: string; segment: string; city: string; state: string; website: string | null; address: string | null; website_status: "informado" | "nao_verificado" };
 export type FoursquareStatus = { configured: boolean; mode: string; message: string };
+export type AuditEvent = {
+  id: string;
+  actor_id: string;
+  action: string;
+  resource_type: string;
+  resource_id: string;
+  occurred_at: string;
+  outcome: string;
+  metadata: Record<string, unknown>;
+};
 
 import { apiJson } from "@/lib/api-client";
 
@@ -45,4 +55,5 @@ export const businessApi = {
   clearFoursquareKey: () => request<FoursquareStatus>("/integrations/foursquare", { method: "PUT", body: JSON.stringify({ clear: true }) }),
   searchPlaces: (input: { establishment_name: string; city: string; state: string; quantity?: number }) =>
     request<PlaceResult[]>("/places/search", { method: "POST", body: JSON.stringify({ ...input, quantity: Math.min(input.quantity ?? 20, 20) }) }),
+  auditEvents: (limit = 50) => request<AuditEvent[]>(`/audit?limit=${limit}`),
 };

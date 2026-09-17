@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field, field_validator
 
-from app.modules.business.domain import BusinessSummary, CompanyLead, CompanyLeadCreate, LeadStatus, LeadStatusUpdate
+from app.modules.business.domain import AuditEvent, BusinessSummary, CompanyLead, CompanyLeadCreate, LeadStatus, LeadStatusUpdate
 from app.modules.business.places import (
     FoursquarePlacesService,
     PlaceSearchInput,
@@ -128,6 +128,15 @@ def delete_company_lead(request: Request, lead_id: UUID, principal: Principal = 
 @router.get("/summary", response_model=BusinessSummary)
 def business_summary(request: Request, principal: Principal = Depends(get_current_principal)) -> BusinessSummary:
     return repository(request).summary(principal.organization_id)
+
+
+@router.get("/audit", response_model=list[AuditEvent])
+def list_audit_events(
+    request: Request,
+    limit: int = Query(default=50, ge=1, le=200),
+    principal: Principal = Depends(get_admin_principal),
+) -> list[AuditEvent]:
+    return repository(request).list_audit_events(principal.organization_id, limit)
 
 
 @router.get("/integrations/foursquare", response_model=FoursquareConfigStatus)

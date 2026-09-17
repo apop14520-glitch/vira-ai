@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
+  AuditEvent,
   businessApi,
   BusinessSummary,
   CompanyLead,
@@ -85,6 +86,10 @@ export function BusinessDashboard() {
   const [draftError, setDraftError] = useState<string | null>(null);
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
   const [deletingLeadId, setDeletingLeadId] = useState<string | null>(null);
+  const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
+  const [auditVisible, setAuditVisible] = useState(false);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState<string | null>(null);
 
   const reload = async () => {
     const [nextLeads, nextSummary] = await Promise.all([businessApi.list(), businessApi.summary()]);
@@ -216,6 +221,21 @@ export function BusinessDashboard() {
     }
   }
 
+  async function toggleAuditLog() {
+    const next = !auditVisible;
+    setAuditVisible(next);
+    if (!next || auditEvents.length > 0) return;
+    setAuditLoading(true);
+    setAuditError(null);
+    try {
+      setAuditEvents(await businessApi.auditEvents());
+    } catch (error) {
+      setAuditError(error instanceof Error ? error.message : "Não foi possível carregar o log de auditoria.");
+    } finally {
+      setAuditLoading(false);
+    }
+  }
+
   async function deleteLead(lead: CompanyLead) {
     setDeletingLeadId(lead.id);
     try {
@@ -302,6 +322,39 @@ export function BusinessDashboard() {
         {message && <p aria-live="polite" className="mt-4 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2.5 text-sm font-semibold text-cyan-950 dark:border-cyan-400/30 dark:bg-cyan-400/10 dark:text-cyan-100">{message}</p>}
         {!loading && leads.length === 0 && <p className="mt-5 rounded-2xl border border-dashed border-slate-300 px-4 py-10 text-center text-sm font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-400">Nenhuma empresa adicionada. Faça uma busca acima e escolha um local para preencher o lead.</p>}
         {leads.length > 0 && <div className="mt-5 grid gap-3 lg:grid-cols-2">{leads.map((lead) => <LeadCard key={lead.id} lead={lead} onStatusChange={(status) => void changeStatus(lead, status)} confirmingDelete={deleteCandidateId === lead.id} deleting={deletingLeadId === lead.id} onRequestDelete={() => setDeleteCandidateId(lead.id)} onCancelDelete={() => setDeleteCandidateId(null)} onConfirmDelete={() => void deleteLead(lead)} />)}</div>}
+      </section>
+
+      <section className="rounded-3xl border border-slate-300 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/40 sm:p-7">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700 dark:text-cyan-300">Auditoria</p>
+            <h2 className="mt-1 text-lg font-black text-slate-950 dark:text-white">Log de eventos</h2>
+          </div>
+          <button type="button" onClick={() => void toggleAuditLog()} className="rounded-xl border border-slate-300 px-4 py-2.5 text-xs font-black text-slate-800 transition hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-900 dark:border-slate-700 dark:text-slate-200 dark:hover:border-cyan-400/50 dark:hover:bg-cyan-400/10 dark:hover:text-cyan-200">{auditVisible ? "Ocultar" : "Ver log"}</button>
+        </div>
+        {auditVisible && (
+          <div className="mt-5">
+            {auditLoading && <p className="text-sm font-bold text-cyan-700 dark:text-cyan-300">Carregando…</p>}
+            {auditError && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-800 dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-200">{auditError}</p>}
+            {!auditLoading && !auditError && auditEvents.length === 0 && <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-400">Nenhum evento registrado ainda.</p>}
+            {auditEvents.length > 0 && (
+              <ul className="divide-y divide-slate-200 dark:divide-slate-800">
+                {auditEvents.map((event) => (
+                  <li key={event.id} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-slate-950 dark:text-white">{event.action}</p>
+                      <p className="text-xs font-medium text-slate-600 dark:text-slate-400">{event.resource_type} · {event.resource_id}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{new Date(event.occurred_at).toLocaleString("pt-BR")}</p>
+                      <p className={`text-xs font-black ${event.outcome === "success" ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>{event.outcome}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </section>
 
       {draft && draftMode && <LeadDrawer draft={draft} mode={draftMode} address={draftAddress} submitting={draftSubmitting} error={draftError} updateDraft={updateDraft} onClose={closeDraft} onSubmit={submitDraft} />}

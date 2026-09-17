@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 
 from app.db.sqlite import SQLiteDatabase
 from app.modules.business.domain import (
+    AuditEvent,
     BusinessSummary,
     CompanyLead,
     CompanyLeadCreate,
@@ -265,6 +266,30 @@ class SQLiteCompanyLeadRepository:
                 audit_context,
                 outcome,
             )
+
+    def list_audit_events(self, organization_id: UUID, limit: int = 50) -> list[AuditEvent]:
+        """Return the most recent tenant-scoped audit events, newest first."""
+
+        bounded_limit = min(max(limit, 1), 200)
+        with self.database.connect() as connection:
+            rows = connection.execute(
+                """SELECT * FROM business_audit_events WHERE organization_id = ?
+                ORDER BY occurred_at DESC LIMIT ?""",
+                (str(organization_id), bounded_limit),
+            ).fetchall()
+        return [
+            AuditEvent(
+                id=UUID(row["id"]),
+                actor_id=row["actor_id"],
+                action=row["action"],
+                resource_type=row["resource_type"],
+                resource_id=row["resource_id"],
+                occurred_at=datetime.fromisoformat(row["occurred_at"]),
+                outcome=row["outcome"],
+                metadata=json.loads(row["metadata_json"]),
+            )
+            for row in rows
+        ]
 
     def list(self, organization_id: UUID, status: LeadStatus | None = None, query: str | None = None) -> list[CompanyLead]:
         clauses = ["organization_id = ?"]

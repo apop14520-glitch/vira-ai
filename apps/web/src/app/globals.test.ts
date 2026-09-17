@@ -44,4 +44,14 @@ describe("layout responsivo do painel de configurações", () => {
     expect(darkLoginStage).toContain("min-height: 100%;");
     expect(darkLoginStage).toContain("width: 100%;");
   });
+
+  it("mantém os marcadores da senha visíveis no tema claro", () => {
+    const css = readFileSync(resolve(process.cwd(), "src/app/globals.css"), "utf8");
+    const lightLoginInput = css.match(/html\[data-theme="light"\] \.login-page--dark \.login-input \{[\s\S]*?\n\}/)?.[0];
+
+    expect(lightLoginInput).toBeDefined();
+    expect(lightLoginInput).toContain("color: #0f172a !important;");
+    expect(lightLoginInput).toContain("-webkit-text-fill-color: #0f172a;");
+    expect(lightLoginInput).toContain("caret-color: #0f172a;");
+  });
 });

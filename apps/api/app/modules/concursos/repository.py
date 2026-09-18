@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from app.db.sqlite import SQLiteDatabase
+from app.db.ports import Database
 from app.modules.concursos.domain import (
     AuditEvent,
     ConcursosSummary,
@@ -38,7 +38,7 @@ class AuditContext:
 class SQLiteConcursosRepository:
     """Local implementation; replace only this adapter for PostgreSQL later."""
 
-    def __init__(self, database: SQLiteDatabase) -> None:
+    def __init__(self, database: Database) -> None:
         self.database = database
 
     def initialize_schema(self) -> None:

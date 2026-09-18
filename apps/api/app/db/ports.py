@@ -1,8 +1,7 @@
 """Persistence ports used to keep storage choices replaceable."""
 
-import sqlite3
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Any, Protocol
 
 
 @dataclass(frozen=True)
@@ -20,7 +19,7 @@ class Database(Protocol):
     def initialize(self) -> None:
         """Prepare local schema/resources."""
 
-    def connect(self) -> sqlite3.Connection:
+    def connect(self) -> Any:
         """Open a short-lived unit-of-work connection."""
 
     def close(self) -> None:

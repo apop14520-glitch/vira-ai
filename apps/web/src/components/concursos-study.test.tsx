@@ -64,17 +64,17 @@ describe("StudySession", () => {
     expect(screen.getByText("Questão 1 de 2")).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /^A\) Opção um/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^A\s*Opção um/ }));
 
     const feedback = await screen.findByRole("status");
     expect(feedback).toHaveTextContent("Incorreto. Gabarito: B");
     expect(feedback).toHaveTextContent("Porque a alternativa B é a correta.");
-    expect(screen.getByRole("button", { name: /^C\) Opção três/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^C\s*Opção três/ })).toBeDisabled();
 
     fireEvent.click(screen.getByRole("button", { name: "Próxima questão" }));
     expect(await screen.findByText("Segunda pergunta?")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /^C\) Opção três/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^C\s*Opção três/ }));
     expect(await screen.findByText("Correto!")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Ver resultado" }));

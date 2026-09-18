@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 
-import { optionText, optionsOf, percentage } from "@/components/concursos-shared";
+import { optionText, optionsOf, percentage, useScrollIntoViewOnChange } from "@/components/concursos-shared";
 import { TopicPicker } from "@/components/concursos-topic-picker";
+import { choice, letter as letterTone, reviewCard, scoreTone, ui, verdict } from "@/components/concursos-ui";
 import { concursosApi, QuestionOption, QuestionPublic, QuizAnswerResult, Topic } from "@/lib/concursos-api";
 
 type Phase = "setup" | "running" | "done";
@@ -21,6 +22,7 @@ export function StudySession({ topics }: { topics: Topic[] }) {
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const rootRef = useScrollIntoViewOnChange(`${phase}-${index}`);
 
   const start = async () => {
     setBusy(true);
@@ -69,13 +71,16 @@ export function StudySession({ topics }: { topics: Topic[] }) {
   };
 
   const correctCount = attempts.filter((attempt) => attempt.result.is_correct).length;
+  const score = percentage(correctCount, attempts.length);
+
+  let content;
 
   if (phase === "setup") {
-    return (
-      <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 sm:p-6">
+    content = (
+      <section className={`${ui.card} space-y-5`}>
         <div>
-          <h2 className="text-lg font-black text-white">Sessão de estudo</h2>
-          <p className="mt-1 text-sm text-slate-400">
+          <h2 className={ui.title}>Sessão de estudo</h2>
+          <p className={`mt-1 ${ui.muted}`}>
             Resolva uma questão por vez e veja o gabarito com a explicação logo depois de responder. Sem cronômetro e
             sem nota: o objetivo é aprender.
           </p>
@@ -86,114 +91,103 @@ export function StudySession({ topics }: { topics: Topic[] }) {
           selectedIds={selectedTopicIds}
           onChange={setSelectedTopicIds}
         />
-        <label className="flex items-center gap-2 text-sm text-slate-300">
+        <label className={`flex flex-wrap items-center gap-3 ${ui.body} font-bold`}>
           Quantidade de questões
-          <select
-            value={quantity}
-            onChange={(event) => setQuantity(Number(event.target.value))}
-            className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-white"
-          >
+          <select value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} className={ui.control}>
             {QUANTITIES.map((value) => (
               <option key={value} value={value}>{value}</option>
             ))}
           </select>
         </label>
-        {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
-        <button
-          type="button"
-          onClick={start}
-          disabled={busy}
-          className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-300 disabled:opacity-40"
-        >
+        {error && <p role="alert" className={ui.alert}>{error}</p>}
+        <button type="button" onClick={start} disabled={busy} className={`${ui.primaryButton} w-full sm:w-auto`}>
           Começar sessão
         </button>
       </section>
     );
-  }
-
-  if (phase === "done") {
+  } else if (phase === "done") {
     const missed = attempts.filter((attempt) => !attempt.result.is_correct);
-    return (
-      <section className="space-y-4 rounded-2xl border border-amber-400/30 bg-amber-400/5 p-4 sm:p-6">
-        <h2 className="text-lg font-black text-white">Sessão concluída</h2>
-        <p className="text-sm font-bold text-white">
-          Você acertou {correctCount} de {attempts.length} ({percentage(correctCount, attempts.length)}%).
+    const tone = score >= 70 ? scoreTone.good : score >= 50 ? scoreTone.fair : scoreTone.poor;
+    content = (
+      <section className={`${ui.card} space-y-5`}>
+        <h2 className={ui.title}>Sessão concluída</h2>
+        <p className={`rounded-2xl border px-4 py-3 text-base font-black ${tone}`}>
+          Você acertou {correctCount} de {attempts.length} ({score}%).
         </p>
         {missed.length > 0 && (
           <div className="space-y-3">
-            <h3 className="text-sm font-bold text-slate-200">Para revisar</h3>
+            <h3 className={ui.heading}>Para revisar</h3>
             {missed.map(({ question, result }) => (
-              <div key={question.id} className="rounded-lg border border-slate-800 bg-slate-950/60 p-3 text-sm text-slate-300">
-                <p className="text-slate-100">{question.statement}</p>
-                <p className="mt-2 text-red-300">
+              <div key={question.id} className={reviewCard.wrong}>
+                <p className="text-sm font-semibold leading-6 text-slate-950 dark:text-slate-100">{question.statement}</p>
+                <p className="mt-2 text-sm font-semibold text-red-700 dark:text-red-300">
                   Sua resposta: {result.selected_option.toUpperCase()}) {optionText(question, result.selected_option)}
                 </p>
-                <p className="text-emerald-300">
+                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
                   Gabarito: {result.correct_option.toUpperCase()}) {optionText(question, result.correct_option)}
                 </p>
-                {result.explanation && <p className="mt-1 text-slate-400">{result.explanation}</p>}
+                {result.explanation && <p className={`mt-2 ${ui.body}`}>{result.explanation}</p>}
               </div>
             ))}
           </div>
         )}
-        <button
-          type="button"
-          onClick={() => setPhase("setup")}
-          className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-300"
-        >
+        <button type="button" onClick={() => setPhase("setup")} className={`${ui.primaryButton} w-full sm:w-auto`}>
           Nova sessão
         </button>
       </section>
     );
+  } else {
+    const question = questions[index];
+    const isLast = index + 1 >= questions.length;
+    content = (
+      <section className={`${ui.card} space-y-5`}>
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
+            <span>Questão {index + 1} de {questions.length}</span>
+            <span>Acertos: {correctCount} de {attempts.length}</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800" aria-hidden="true">
+            <div className="h-full rounded-full bg-cyan-500 transition-all" style={{ width: `${(index / questions.length) * 100}%` }} />
+          </div>
+        </div>
+        <p className="text-base font-semibold leading-7 text-slate-950 dark:text-slate-100">{question.statement}</p>
+        <div className="grid gap-2">
+          {optionsOf(question).map(({ letter, text }) => {
+            let tone: keyof typeof choice = "idle";
+            if (feedback) {
+              if (letter === feedback.correct_option) tone = "correct";
+              else if (letter === feedback.selected_option) tone = "wrong";
+              else tone = "muted";
+            }
+            return (
+              <button
+                key={letter}
+                type="button"
+                onClick={() => answer(letter)}
+                disabled={Boolean(feedback) || busy}
+                className={`${choice[tone]} disabled:cursor-default`}
+              >
+                <span className={letterTone[tone]}>{letter.toUpperCase()}</span>
+                <span className="min-w-0">{text}</span>
+              </button>
+            );
+          })}
+        </div>
+        {error && <p role="alert" className={ui.alert}>{error}</p>}
+        {feedback && (
+          <div role="status" className={`space-y-2 ${feedback.is_correct ? verdict.correct : verdict.wrong}`}>
+            <p className="font-black">
+              {feedback.is_correct ? "Correto!" : `Incorreto. Gabarito: ${feedback.correct_option.toUpperCase()}`}
+            </p>
+            {feedback.explanation && <p className="leading-6">{feedback.explanation}</p>}
+            <button type="button" onClick={next} className={`${ui.primaryButton} !px-4 !py-2`}>
+              {isLast ? "Ver resultado" : "Próxima questão"}
+            </button>
+          </div>
+        )}
+      </section>
+    );
   }
 
-  const question = questions[index];
-  const isLast = index + 1 >= questions.length;
-
-  return (
-    <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-400">
-        <span>Questão {index + 1} de {questions.length}</span>
-        <span>Acertos: {correctCount} de {attempts.length}</span>
-      </div>
-      <p className="text-base leading-7 text-slate-100">{question.statement}</p>
-      <div className="grid gap-2">
-        {optionsOf(question).map(({ letter, text }) => {
-          let tone = "border-slate-700 bg-slate-950/60 text-slate-200 hover:border-amber-400/60";
-          if (feedback) {
-            if (letter === feedback.correct_option) tone = "border-emerald-500/60 bg-emerald-500/10 text-emerald-200";
-            else if (letter === feedback.selected_option) tone = "border-red-500/60 bg-red-500/10 text-red-200";
-            else tone = "border-slate-800 bg-slate-950/40 text-slate-500";
-          }
-          return (
-            <button
-              key={letter}
-              type="button"
-              onClick={() => answer(letter)}
-              disabled={Boolean(feedback) || busy}
-              className={`rounded-lg border px-3 py-2 text-left text-sm ${tone}`}
-            >
-              {letter.toUpperCase()}) {text}
-            </button>
-          );
-        })}
-      </div>
-      {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
-      {feedback && (
-        <div role="status" className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/60 p-3 text-sm">
-          <p className={feedback.is_correct ? "font-bold text-emerald-300" : "font-bold text-red-300"}>
-            {feedback.is_correct ? "Correto!" : `Incorreto. Gabarito: ${feedback.correct_option.toUpperCase()}`}
-          </p>
-          {feedback.explanation && <p className="text-slate-300">{feedback.explanation}</p>}
-          <button
-            type="button"
-            onClick={next}
-            className="rounded-lg bg-amber-400 px-3 py-1.5 text-sm font-bold text-slate-950 hover:bg-amber-300"
-          >
-            {isLast ? "Ver resultado" : "Próxima questão"}
-          </button>
-        </div>
-      )}
-    </section>
-  );
+  return <div ref={rootRef} className="scroll-mt-20">{content}</div>;
 }

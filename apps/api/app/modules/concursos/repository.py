@@ -85,6 +85,18 @@ class SQLiteConcursosRepository:
                 );
                 """
             )
+            self._ensure_column(connection, "concursos_questions", "option_e", "TEXT")
+
+    @staticmethod
+    def _ensure_column(connection: sqlite3.Connection, table: str, column: str, definition: str) -> None:
+        """Apply additive local migrations without rewriting existing production data."""
+
+        # table/column/definition are always literal strings passed from initialize_schema()
+        # in this same file, never user input; SQLite has no placeholder syntax for
+        # identifiers anyway, so string formatting is the standard way to run additive DDL.
+        columns = {row["name"] for row in connection.execute(f"PRAGMA table_info({table})").fetchall()}  # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+        if column not in columns:
+            connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")  # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
 
     @staticmethod
     def _now() -> datetime:
@@ -116,6 +128,7 @@ class SQLiteConcursosRepository:
             option_b=row["option_b"],
             option_c=row["option_c"],
             option_d=row["option_d"],
+            option_e=row["option_e"],
             correct_option=row["correct_option"],
             explanation=row["explanation"],
             difficulty=row["difficulty"],
@@ -257,12 +270,12 @@ class SQLiteConcursosRepository:
             now = self._now()
             connection.execute(
                 """INSERT INTO concursos_questions
-                (id, organization_id, topic_id, statement, option_a, option_b, option_c, option_d,
+                (id, organization_id, topic_id, statement, option_a, option_b, option_c, option_d, option_e,
                  correct_option, explanation, difficulty, source, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     str(question_id), str(organization_id), str(data.topic_id), data.statement,
-                    data.option_a, data.option_b, data.option_c, data.option_d,
+                    data.option_a, data.option_b, data.option_c, data.option_d, data.option_e,
                     data.correct_option.value, data.explanation, data.difficulty.value, data.source,
                     now.isoformat(),
                 ),
@@ -310,6 +323,7 @@ class SQLiteConcursosRepository:
                 option_b=row["option_b"],
                 option_c=row["option_c"],
                 option_d=row["option_d"],
+                option_e=row["option_e"],
                 difficulty=row["difficulty"],
             )
             for row in sample

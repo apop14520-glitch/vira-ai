@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { formatClock, optionText, optionsOf, percentage } from "@/components/concursos-shared";
+import { formatClock, optionText, optionsOf, percentage, useScrollIntoViewOnChange } from "@/components/concursos-shared";
 import { TopicPicker } from "@/components/concursos-topic-picker";
+import { choice, letter as letterTone, reviewCard, scoreTone, timerTone, ui } from "@/components/concursos-ui";
 import { concursosApi, ExamResult, QuestionOption, QuestionPublic, Topic } from "@/lib/concursos-api";
 
 type Phase = "setup" | "running" | "result";
@@ -15,14 +16,14 @@ const isIntegratedExamTopic = (topic: Topic) => topic.name.trim().toLowerCase().
 
 function MinutesField({ label, value, onChange }: { label: string; value: number; onChange: (minutes: number) => void }) {
   return (
-    <label className="flex items-center gap-2 text-sm text-slate-300">
+    <label className={`flex flex-wrap items-center gap-3 ${ui.body} font-bold`}>
       {label}
       <input
         type="number"
         min={0}
         value={value}
         onChange={(event) => onChange(Math.max(0, Number(event.target.value) || 0))}
-        className="w-20 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-white"
+        className={`w-24 ${ui.control}`}
       />
     </label>
   );
@@ -45,6 +46,7 @@ export function ExamMode({ topics }: { topics: Topic[] }) {
   const [result, setResult] = useState<ExamResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const startedAt = useRef(0);
+  const rootRef = useScrollIntoViewOnChange(phase);
 
   const integratedTopics = topics.filter((topic) => isIntegratedExamTopic(topic) && topic.question_count > 0);
   const integratedTotal = Math.min(
@@ -52,7 +54,11 @@ export function ExamMode({ topics }: { topics: Topic[] }) {
     integratedTopics.reduce((sum, topic) => sum + topic.question_count, 0),
   );
   const integratedMinutesValue = integratedMinutes ?? integratedTotal * MINUTES_PER_QUESTION;
-  const customMinutesValue = customMinutes ?? customQuantity * MINUTES_PER_QUESTION;
+
+  const customPool = topics.filter((topic) => customTopicIds.length === 0 || customTopicIds.includes(topic.id));
+  const customAvailable = customPool.reduce((sum, topic) => sum + topic.question_count, 0);
+  const customDrawn = Math.min(customQuantity, customAvailable);
+  const customMinutesValue = customMinutes ?? customDrawn * MINUTES_PER_QUESTION;
 
   const begin = async (topicIds: string[], quantity: number, minutes: number) => {
     setBusy(true);
@@ -100,7 +106,7 @@ export function ExamMode({ topics }: { topics: Topic[] }) {
     }
   };
 
-  // The interval outlives renders, so it must call the latest closure (current answers).
+  // O intervalo sobrevive às renderizações, então precisa chamar o fechamento mais recente (respostas atuais).
   const finishRef = useRef(finish);
   useEffect(() => {
     finishRef.current = finish;
@@ -122,23 +128,25 @@ export function ExamMode({ topics }: { topics: Topic[] }) {
   const answeredCount = questions.filter((question) => answers[question.id]).length;
   const blankCount = questions.length - answeredCount;
 
+  let content;
+
   if (phase === "setup") {
-    return (
+    content = (
       <section className="space-y-4">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 sm:p-6">
-          <h2 className="text-lg font-black text-white">Simulados</h2>
-          <p className="mt-1 text-sm text-slate-400">
+        <div className={ui.card}>
+          <h2 className={ui.title}>Simulados</h2>
+          <p className={`mt-1 ${ui.muted}`}>
             Prova com cronômetro: você responde tudo primeiro e só vê o gabarito e a nota no final.
           </p>
         </div>
 
-        <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 sm:p-6">
-          <h3 className="text-sm font-bold text-white">Simulado Integrado</h3>
+        <div className={`${ui.card} space-y-3`}>
+          <h3 className={ui.heading}>Simulado Integrado</h3>
           {integratedTotal === 0 ? (
-            <p className="text-sm text-slate-500">Nenhum simulado integrado cadastrado ainda.</p>
+            <p className={ui.muted}>Nenhum simulado integrado cadastrado ainda.</p>
           ) : (
             <>
-              <p className="text-sm text-slate-400">{integratedTotal} questões de vários assuntos, em ordem aleatória.</p>
+              <p className={ui.muted}>{integratedTotal} questões de vários assuntos, em ordem aleatória.</p>
               <MinutesField
                 label="Tempo do simulado integrado (minutos, 0 = sem limite)"
                 value={integratedMinutesValue}
@@ -148,7 +156,7 @@ export function ExamMode({ topics }: { topics: Topic[] }) {
                 type="button"
                 disabled={busy}
                 onClick={() => begin(integratedTopics.map((topic) => topic.id), integratedTotal, integratedMinutesValue)}
-                className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-300 disabled:opacity-40"
+                className={`${ui.primaryButton} w-full sm:w-auto`}
               >
                 Iniciar Simulado Integrado
               </button>
@@ -156,16 +164,17 @@ export function ExamMode({ topics }: { topics: Topic[] }) {
           )}
         </div>
 
-        <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 sm:p-6">
-          <h3 className="text-sm font-bold text-white">Simulado personalizado</h3>
+        <div className={`${ui.card} space-y-4`}>
+          <h3 className={ui.heading}>Simulado personalizado</h3>
           <TopicPicker
             legend="Assuntos (nenhum marcado = todos)"
             topics={topics}
             selectedIds={customTopicIds}
             onChange={setCustomTopicIds}
           />
-          <div className="flex flex-wrap gap-4">
-            <label className="flex items-center gap-2 text-sm text-slate-300">
+          <p className={ui.muted}>{customAvailable} questões disponíveis nos assuntos escolhidos.</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-6">
+            <label className={`flex flex-wrap items-center gap-3 ${ui.body} font-bold`}>
               Quantidade de questões
               <input
                 type="number"
@@ -175,7 +184,7 @@ export function ExamMode({ topics }: { topics: Topic[] }) {
                 onChange={(event) =>
                   setCustomQuantity(Math.min(MAX_QUESTIONS, Math.max(1, Number(event.target.value) || 1)))
                 }
-                className="w-20 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-white"
+                className={`w-24 ${ui.control}`}
               />
             </label>
             <MinutesField
@@ -188,25 +197,25 @@ export function ExamMode({ topics }: { topics: Topic[] }) {
             type="button"
             disabled={busy}
             onClick={() => begin(customTopicIds, customQuantity, customMinutesValue)}
-            className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-300 disabled:opacity-40"
+            className={`${ui.primaryButton} w-full sm:w-auto`}
           >
             Iniciar simulado personalizado
           </button>
         </div>
 
-        {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
+        {error && <p role="alert" className={ui.alert}>{error}</p>}
       </section>
     );
-  }
-
-  if (phase === "result" && result) {
+  } else if (phase === "result" && result) {
     const byId = new Map(result.results.map((item) => [item.question_id, item]));
-    return (
-      <section className="space-y-4 rounded-2xl border border-amber-400/30 bg-amber-400/5 p-4 sm:p-6">
-        <h2 className="text-lg font-black text-white">Resultado do simulado</h2>
-        <div className="space-y-1 text-sm text-slate-200">
-          <p className="font-bold text-white">
-            Você acertou {result.correct} de {result.total} ({percentage(result.correct, result.total)}%).
+    const score = percentage(result.correct, result.total);
+    const tone = score >= 70 ? scoreTone.good : score >= 50 ? scoreTone.fair : scoreTone.poor;
+    content = (
+      <section className={`${ui.card} space-y-5`}>
+        <h2 className={ui.title}>Resultado do simulado</h2>
+        <div className={`space-y-1 rounded-2xl border px-4 py-3 text-sm font-semibold ${tone}`}>
+          <p className="text-base font-black">
+            Você acertou {result.correct} de {result.total} ({score}%).
           </p>
           <p>Em branco: {result.blank}</p>
           <p>Tempo usado: {formatClock(elapsedSeconds)}</p>
@@ -215,93 +224,111 @@ export function ExamMode({ topics }: { topics: Topic[] }) {
           {questions.map((question, position) => {
             const item = byId.get(question.id);
             if (!item) return null;
-            const tone = item.is_correct
-              ? "border-emerald-500/40"
+            const card = item.is_correct ? reviewCard.correct : item.selected_option ? reviewCard.wrong : reviewCard.blank;
+            const answerTone = item.is_correct
+              ? "text-emerald-700 dark:text-emerald-300"
               : item.selected_option
-                ? "border-red-500/40"
-                : "border-slate-700";
+                ? "text-red-700 dark:text-red-300"
+                : "text-slate-600 dark:text-slate-400";
             return (
-              <div key={question.id} className={`rounded-lg border ${tone} bg-slate-950/60 p-3 text-sm text-slate-300`}>
-                <p className="text-slate-100">{position + 1}. {question.statement}</p>
-                <p className={item.is_correct ? "mt-2 text-emerald-300" : item.selected_option ? "mt-2 text-red-300" : "mt-2 text-slate-400"}>
+              <div key={question.id} className={card}>
+                <p className="text-sm font-semibold leading-6 text-slate-950 dark:text-slate-100">
+                  {position + 1}. {question.statement}
+                </p>
+                <p className={`mt-2 text-sm font-semibold ${answerTone}`}>
                   {item.selected_option
                     ? `Sua resposta: ${item.selected_option.toUpperCase()}) ${optionText(question, item.selected_option)}`
                     : "Em branco"}
                 </p>
                 {!item.is_correct && (
-                  <p className="text-emerald-300">
+                  <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
                     Gabarito: {item.correct_option.toUpperCase()}) {optionText(question, item.correct_option)}
                   </p>
                 )}
-                {item.explanation && <p className="mt-1 text-slate-400">{item.explanation}</p>}
+                {item.explanation && <p className={`mt-2 ${ui.body}`}>{item.explanation}</p>}
               </div>
             );
           })}
         </div>
-        <button
-          type="button"
-          onClick={() => setPhase("setup")}
-          className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-300"
-        >
+        <button type="button" onClick={() => setPhase("setup")} className={`${ui.primaryButton} w-full sm:w-auto`}>
           Novo simulado
         </button>
       </section>
     );
-  }
-
-  return (
-    <section className="space-y-4">
-      <div className="sticky top-[4.5rem] z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/95 p-3 text-sm text-slate-200 backdrop-blur">
-        <span className="font-bold">
-          {timeLimitSeconds > 0 ? `Tempo restante: ${formatClock(remaining)}` : "Sem limite de tempo"}
-        </span>
-        <span>Respondidas: {answeredCount} de {questions.length}</span>
-        {!confirming ? (
-          <button
-            type="button"
-            disabled={submitting}
-            onClick={() => (blankCount > 0 ? setConfirming(true) : void finish())}
-            className="rounded-lg bg-amber-400 px-3 py-1.5 text-sm font-bold text-slate-950 hover:bg-amber-300 disabled:opacity-40"
-          >
-            Finalizar simulado
-          </button>
-        ) : (
-          <span className="flex flex-wrap items-center gap-2">
-            <span className="text-amber-200">Ainda há {blankCount} em branco. Finalizar mesmo assim?</span>
+  } else {
+    const timerClass = remaining <= 60 ? timerTone.critical : remaining <= 300 ? timerTone.warning : timerTone.calm;
+    content = (
+      <section className="space-y-4">
+        <div className="sticky top-[4.5rem] z-10 space-y-3 rounded-2xl border border-slate-300 bg-white/95 p-3 shadow-md backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm font-bold text-slate-800 dark:text-slate-200">
+            <span className={timeLimitSeconds > 0 ? timerClass : timerTone.calm}>
+              {timeLimitSeconds > 0 ? `Tempo restante: ${formatClock(remaining)}` : "Sem limite de tempo"}
+            </span>
+            <span>Respondidas: {answeredCount} de {questions.length}</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800" aria-hidden="true">
+            <div
+              className="h-full rounded-full bg-cyan-500 transition-all"
+              style={{ width: `${percentage(answeredCount, questions.length)}%` }}
+            />
+          </div>
+          {!confirming ? (
             <button
               type="button"
               disabled={submitting}
-              onClick={() => void finish()}
-              className="rounded-lg bg-amber-400 px-3 py-1.5 text-sm font-bold text-slate-950 hover:bg-amber-300 disabled:opacity-40"
+              onClick={() => (blankCount > 0 ? setConfirming(true) : void finish())}
+              className={`${ui.primaryButton} w-full !py-2 sm:w-auto`}
             >
-              Sim, finalizar
+              Finalizar simulado
             </button>
-            <button type="button" onClick={() => setConfirming(false)} className="text-slate-400 underline">
-              Continuar respondendo
-            </button>
-          </span>
-        )}
-      </div>
-      {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
-      {questions.map((question, position) => (
-        <div key={question.id} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
-          <p className="text-sm leading-6 text-slate-100">{position + 1}. {question.statement}</p>
-          <div className="mt-3 grid gap-1.5">
-            {optionsOf(question).map(({ letter, text }) => (
-              <label key={letter} className="flex items-start gap-2 text-sm text-slate-300">
-                <input
-                  type="radio"
-                  name={`exam-${question.id}`}
-                  checked={answers[question.id] === letter}
-                  onChange={() => setAnswers({ ...answers, [question.id]: letter })}
-                  className="mt-1"
-                />
-                <span>{letter.toUpperCase()}) {text}</span>
-              </label>
-            ))}
-          </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <span className="text-sm font-bold text-amber-800 dark:text-amber-300">
+                Ainda há {blankCount} em branco. Finalizar mesmo assim?
+              </span>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => void finish()}
+                className={`${ui.primaryButton} !px-4 !py-2`}
+              >
+                Sim, finalizar
+              </button>
+              <button type="button" onClick={() => setConfirming(false)} className={ui.linkButton}>
+                Continuar respondendo
+              </button>
+            </div>
+          )}
         </div>
-      ))}
-    </section>
-  );
+        {error && <p role="alert" className={ui.alert}>{error}</p>}
+        {questions.map((question, position) => (
+          <div key={question.id} className={ui.card}>
+            <p className="text-base font-semibold leading-7 text-slate-950 dark:text-slate-100">
+              {position + 1}. {question.statement}
+            </p>
+            <div className="mt-3 grid gap-2">
+              {optionsOf(question).map(({ letter, text }) => {
+                const selected = answers[question.id] === letter;
+                return (
+                  <label key={letter} className={`${selected ? choice.selected : choice.idle} cursor-pointer`}>
+                    <input
+                      type="radio"
+                      name={`exam-${question.id}`}
+                      checked={selected}
+                      onChange={() => setAnswers({ ...answers, [question.id]: letter })}
+                      className={`mt-1.5 h-4 w-4 shrink-0 ${ui.accent}`}
+                    />
+                    <span className={selected ? letterTone.selected : letterTone.idle}>{letter.toUpperCase()}</span>
+                    <span className="min-w-0">{text}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </section>
+    );
+  }
+
+  return <div ref={rootRef} className="scroll-mt-20">{content}</div>;
 }

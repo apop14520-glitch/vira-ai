@@ -24,10 +24,11 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     );
   } catch {
     return NextResponse.json(
-      { error: { code: "UPSTREAM_MISCONFIGURED", message: "A API não está configurada neste Worker. Defina API_INTERNAL_URL com a URL pública do serviço Railway." } },
+      { error: { code: "UPSTREAM_MISCONFIGURED", message: "A API não está configurada neste Worker. Defina API_INTERNAL_URL com a URL pública do servidor da API." } },
       { status: 502 },
     );
   }
+  target.search = request.nextUrl.search;
 
   const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer();
   let response: Response;
@@ -41,7 +42,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     });
   } catch {
     return NextResponse.json(
-      { error: { code: "UPSTREAM_UNAVAILABLE", message: "Não foi possível conectar à API. Verifique se o serviço Railway está ativo." } },
+      { error: { code: "UPSTREAM_UNAVAILABLE", message: "Não foi possível conectar à API. Verifique se o servidor da API está ativo." } },
       { status: 502 },
     );
   }

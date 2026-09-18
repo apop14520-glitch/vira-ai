@@ -10,8 +10,6 @@ export type Topic = {
   created_at: string;
 };
 
-export type TopicInput = { name: string; description?: string };
-
 export type Question = {
   id: string;
   organization_id: string;
@@ -27,20 +25,6 @@ export type Question = {
   difficulty: QuestionDifficulty;
   source: string;
   created_at: string;
-};
-
-export type QuestionInput = {
-  topic_id: string;
-  statement: string;
-  option_a: string;
-  option_b: string;
-  option_c: string;
-  option_d: string;
-  option_e?: string | null;
-  correct_option: QuestionOption;
-  explanation?: string;
-  difficulty?: QuestionDifficulty;
-  source?: string;
 };
 
 export type QuestionPublic = {
@@ -94,13 +78,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const concursosApi = {
   listTopics: () => request<Topic[]>("/topics"),
-  createTopic: (input: TopicInput) => request<Topic>("/topics", { method: "POST", body: JSON.stringify(input) }),
-  deleteTopic: (topicId: string) => request<void>(`/topics/${topicId}`, { method: "DELETE" }),
   listQuestions: (topicId?: string) =>
     request<Question[]>(`/questions${topicId ? `?topic_id=${topicId}` : ""}`),
-  createQuestion: (input: QuestionInput) =>
-    request<Question>("/questions", { method: "POST", body: JSON.stringify(input) }),
-  deleteQuestion: (questionId: string) => request<void>(`/questions/${questionId}`, { method: "DELETE" }),
   drawQuestions: (topicIds: string[], quantity: number) =>
     request<QuestionPublic[]>("/questions/draw", {
       method: "POST",

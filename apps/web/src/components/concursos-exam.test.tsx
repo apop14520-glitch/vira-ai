@@ -75,7 +75,7 @@ describe("ExamMode", () => {
     await screen.findByText("1. Primeira da prova?");
 
     expect(screen.getByText("Respondidas: 0 de 2")).toBeInTheDocument();
-    fireEvent.click(screen.getAllByLabelText(/^B\) Alternativa dois/)[0]);
+    fireEvent.click(screen.getAllByLabelText(/^B\s*Alternativa dois/)[0]);
     expect(screen.getByText("Respondidas: 1 de 2")).toBeInTheDocument();
     expect(screen.queryByText(/Gabarito/)).not.toBeInTheDocument();
 
@@ -103,7 +103,7 @@ describe("ExamMode", () => {
     fireEvent.click(screen.getByRole("button", { name: "Iniciar Simulado Integrado" }));
     await screen.findByText("1. Primeira da prova?");
 
-    fireEvent.click(screen.getAllByLabelText(/^B\) Alternativa dois/)[0]);
+    fireEvent.click(screen.getAllByLabelText(/^B\s*Alternativa dois/)[0]);
     expect(api.submitExam).not.toHaveBeenCalled();
 
     await act(async () => {
@@ -113,6 +113,36 @@ describe("ExamMode", () => {
     expect(api.submitExam).toHaveBeenCalledTimes(1);
     expect(api.submitExam).toHaveBeenCalledWith([{ question_id: "q1", selected_option: "b" }], ["q2"]);
     expect(await screen.findByText("Resultado do simulado")).toBeInTheDocument();
+  });
+
+  it("volta ao topo ao iniciar a prova, para não deixar a pessoa no meio das questões", async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    render(<ExamMode topics={topics} />);
+    expect(scrollIntoView).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Iniciar Simulado Integrado" }));
+    await screen.findByText("1. Primeira da prova?");
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
+    const callsAfterStart = scrollIntoView.mock.calls.length;
+
+    fireEvent.click(screen.getByRole("button", { name: "Finalizar simulado" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sim, finalizar" }));
+    await screen.findByText("Resultado do simulado");
+
+    expect(scrollIntoView.mock.calls.length).toBeGreaterThan(callsAfterStart);
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+  });
+
+  it("sugere o tempo do simulado personalizado pelas questões que existem, não pela quantidade pedida", () => {
+    render(<ExamMode topics={topics} />);
+
+    fireEvent.click(screen.getByLabelText(/Redes/));
+
+    expect(screen.getByText("5 questões disponíveis nos assuntos escolhidos.")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Tempo do simulado personalizado/)).toHaveValue(10);
   });
 
   it("permite um simulado personalizado e sem limite de tempo", async () => {

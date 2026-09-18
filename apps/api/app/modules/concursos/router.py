@@ -8,10 +8,14 @@ from pydantic import BaseModel, Field
 from app.modules.concursos.domain import (
     AuditEvent,
     ConcursosSummary,
+    DrawRequest,
+    ExamResult,
+    ExamSubmission,
     Question,
     QuestionCreate,
     QuestionPublic,
     QuizAnswer,
+    QuizAnswerResult,
     QuizResult,
     QuizSubmission,
     Topic,
@@ -110,6 +114,42 @@ def submit_quiz(
     except QuestionNotFoundError as error:
         raise HTTPException(status_code=404, detail="Questão não encontrada.") from error
     return QuizResult(topic_id=payload.topic_id, total=total, correct=correct, results=results)
+
+
+@router.post("/questions/draw", response_model=list[QuestionPublic])
+def draw_questions(
+    request: Request, payload: DrawRequest, principal: Principal = Depends(get_current_principal)
+) -> list[QuestionPublic]:
+    return repository(request).draw_questions(principal.organization_id, payload.topic_ids, payload.quantity)
+
+
+@router.post("/questions/check", response_model=QuizAnswerResult)
+def check_answer(
+    request: Request, payload: QuizAnswer, principal: Principal = Depends(get_current_principal)
+) -> QuizAnswerResult:
+    try:
+        result = repository(request).check_answer(
+            principal.organization_id, payload.question_id, payload.selected_option.value
+        )
+    except QuestionNotFoundError as error:
+        raise HTTPException(status_code=404, detail="Questão não encontrada.") from error
+    return QuizAnswerResult(**result)
+
+
+@router.post("/exams/submit", response_model=ExamResult)
+def submit_exam(
+    request: Request, payload: ExamSubmission, principal: Principal = Depends(get_current_principal)
+) -> ExamResult:
+    try:
+        total, correct, results = repository(request).grade_exam(
+            principal.organization_id,
+            [(answer.question_id, answer.selected_option.value) for answer in payload.answers],
+            payload.blank_question_ids,
+            audit_context(request, principal),
+        )
+    except QuestionNotFoundError as error:
+        raise HTTPException(status_code=404, detail="Questão não encontrada.") from error
+    return ExamResult(total=total, correct=correct, blank=len(payload.blank_question_ids), results=results)
 
 
 @router.get("/summary", response_model=ConcursosSummary)

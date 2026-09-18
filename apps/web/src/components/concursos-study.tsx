@@ -12,9 +12,16 @@ type Attempt = { question: QuestionPublic; result: QuizAnswerResult };
 
 const QUANTITIES = [5, 10, 20, 50];
 
-export function StudySession({ topics }: { topics: Topic[] }) {
+type StudySessionProps = {
+  topics: Topic[];
+  /** Assuntos já marcados ao abrir (por exemplo, vindos do botão "Praticar" da teoria). */
+  initialTopicIds?: string[];
+  onOpenTheory?: (topicId: string) => void;
+};
+
+export function StudySession({ topics, initialTopicIds = [], onOpenTheory }: StudySessionProps) {
   const [phase, setPhase] = useState<Phase>("setup");
-  const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
+  const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>(initialTopicIds);
   const [quantity, setQuantity] = useState(10);
   const [questions, setQuestions] = useState<QuestionPublic[]>([]);
   const [index, setIndex] = useState(0);
@@ -73,6 +80,9 @@ export function StudySession({ topics }: { topics: Topic[] }) {
   const correctCount = attempts.filter((attempt) => attempt.result.is_correct).length;
   const score = percentage(correctCount, attempts.length);
 
+  const theoryTopic =
+    selectedTopicIds.length === 1 ? topics.find((topic) => topic.id === selectedTopicIds[0] && topic.has_theory) : undefined;
+
   let content;
 
   if (phase === "setup") {
@@ -91,6 +101,14 @@ export function StudySession({ topics }: { topics: Topic[] }) {
           selectedIds={selectedTopicIds}
           onChange={setSelectedTopicIds}
         />
+        {theoryTopic && onOpenTheory && (
+          <p className={ui.info}>
+            Este assunto tem teoria no manual.{" "}
+            <button type="button" onClick={() => onOpenTheory(theoryTopic.id)} className={`${ui.linkButton} !text-sm`}>
+              Ler a teoria antes das questões
+            </button>
+          </p>
+        )}
         <label className={`flex flex-wrap items-center gap-3 ${ui.body} font-bold`}>
           Quantidade de questões
           <select value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} className={ui.control}>

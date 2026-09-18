@@ -8,16 +8,17 @@ const api = vi.hoisted(() => ({ drawQuestions: vi.fn(), submitExam: vi.fn() }));
 vi.mock("@/lib/concursos-api", () => ({ concursosApi: api }));
 
 const topics: Topic[] = [
-  { id: "s1", organization_id: "o", name: "Simulado Integrado", description: "", question_count: 20, created_at: "" },
+  { id: "s1", organization_id: "o", name: "Simulado Integrado", description: "", question_count: 20, has_theory: false, created_at: "" },
   {
     id: "s2",
     organization_id: "o",
     name: "Simulado Integrado — Conhecimentos Gerais",
     description: "",
     question_count: 12,
+    has_theory: false,
     created_at: "",
   },
-  { id: "t1", organization_id: "o", name: "Redes", description: "", question_count: 5, created_at: "" },
+  { id: "t1", organization_id: "o", name: "Redes", description: "", question_count: 5, has_theory: false, created_at: "" },
 ];
 
 const question = (id: string, statement: string): QuestionPublic => ({

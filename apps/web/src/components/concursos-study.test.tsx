@@ -8,8 +8,8 @@ const api = vi.hoisted(() => ({ drawQuestions: vi.fn(), checkAnswer: vi.fn() }))
 vi.mock("@/lib/concursos-api", () => ({ concursosApi: api }));
 
 const topics: Topic[] = [
-  { id: "t1", organization_id: "o", name: "Redes", description: "", question_count: 2, created_at: "" },
-  { id: "t2", organization_id: "o", name: "Vazio", description: "", question_count: 0, created_at: "" },
+  { id: "t1", organization_id: "o", name: "Redes", description: "", question_count: 2, has_theory: true, created_at: "" },
+  { id: "t2", organization_id: "o", name: "Vazio", description: "", question_count: 0, has_theory: false, created_at: "" },
 ];
 
 const question = (id: string, statement: string): QuestionPublic => ({
@@ -85,6 +85,31 @@ describe("StudySession", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Nova sessão" }));
     expect(screen.getByRole("button", { name: "Começar sessão" })).toBeInTheDocument();
+  });
+
+  it("abre com os assuntos já marcados quando vem da teoria", () => {
+    render(<StudySession topics={topics} initialTopicIds={["t1"]} />);
+
+    expect(screen.getByLabelText(/Redes/)).toBeChecked();
+  });
+
+  it("oferece ler a teoria quando exatamente um assunto com teoria está marcado", () => {
+    const onOpenTheory = vi.fn();
+    render(<StudySession topics={topics} onOpenTheory={onOpenTheory} />);
+
+    expect(screen.queryByRole("button", { name: /Ler a teoria/ })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText(/Redes/));
+    fireEvent.click(screen.getByRole("button", { name: "Ler a teoria antes das questões" }));
+
+    expect(onOpenTheory).toHaveBeenCalledWith("t1");
+  });
+
+  it("não oferece a teoria de um assunto que não tem", () => {
+    const semTeoria = [{ ...topics[0], has_theory: false }];
+    render(<StudySession topics={semTeoria} initialTopicIds={["t1"]} onOpenTheory={vi.fn()} />);
+
+    expect(screen.queryByRole("button", { name: /Ler a teoria/ })).not.toBeInTheDocument();
   });
 
   it("avisa quando não há questões e não inicia a sessão", async () => {

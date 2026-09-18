@@ -5,14 +5,16 @@ import { useEffect, useState } from "react";
 import { ExamMode } from "@/components/concursos-exam";
 import { sortTopics } from "@/components/concursos-shared";
 import { StudySession } from "@/components/concursos-study";
+import { ConcursosTheory } from "@/components/concursos-theory";
 import { tab as tabTone, topicRow, ui } from "@/components/concursos-ui";
 import { AuditEvent, concursosApi, ConcursosSummary, Question, QuestionDifficulty, Topic } from "@/lib/concursos-api";
 import { useMediaQuery } from "@/lib/use-media-query";
 
-type Tab = "questoes" | "estudo" | "simulados";
+type Tab = "questoes" | "teoria" | "estudo" | "simulados";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "questoes", label: "Questões" },
+  { id: "teoria", label: "Teoria" },
   { id: "estudo", label: "Sessão de estudo" },
   { id: "simulados", label: "Simulados" },
 ];
@@ -72,6 +74,8 @@ export function ConcursosDashboard() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [questionsLoading, setQuestionsLoading] = useState(false);
   const [tab, setTab] = useState<Tab>("questoes");
+  const [studyTopicIds, setStudyTopicIds] = useState<string[]>([]);
+  const [theoryTopicId, setTheoryTopicId] = useState("");
   const [bankOpen, setBankOpen] = useState(false);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [auditVisible, setAuditVisible] = useState(false);
@@ -128,20 +132,39 @@ export function ConcursosDashboard() {
     return <div className={`${ui.card} ${ui.muted}`}>Carregando Concursos…</div>;
   }
 
-  const selectedTopic = topics.find((topic) => topic.id === selectedTopicId);
+  // O banco de questões só lista assuntos com questões (a revisão estratégica, por exemplo, só tem teoria).
+  const bankTopics = topics.filter((topic) => topic.question_count > 0);
+  const theoryCount = topics.filter((topic) => topic.has_theory).length;
+  const selectedTopic = bankTopics.find((topic) => topic.id === selectedTopicId);
+
+  const openTab = (next: Tab) => {
+    setStudyTopicIds([]);
+    setTheoryTopicId("");
+    setTab(next);
+  };
+  const practiceTopic = (topicId: string) => {
+    setStudyTopicIds([topicId]);
+    setTab("estudo");
+  };
+  const readTheory = (topicId: string) => {
+    setTheoryTopicId(topicId);
+    setTab("teoria");
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8">
       <section className={ui.cardAccent}>
         <p className={ui.eyebrow}>VIRA Concursos</p>
-        <h1 className={ui.pageTitle}>Questões, estudo e simulados</h1>
+        <h1 className={ui.pageTitle}>Teoria, questões e simulados</h1>
         <p className={`mt-2 max-w-2xl ${ui.muted} leading-6`}>
-          Consulte o banco de questões, estude com feedback imediato e faça simulados cronometrados.
+          Leia a teoria de cada assunto, consulte o banco de questões, estude com feedback imediato e faça simulados
+          cronometrados.
         </p>
         {summary && (
           <div className="mt-4 flex flex-wrap gap-2">
-            <span className={ui.pill}>{summary.total_topics} tópicos</span>
+            <span className={ui.pill}>{bankTopics.length} tópicos</span>
             <span className={ui.pill}>{summary.total_questions} questões</span>
+            {theoryCount > 0 && <span className={ui.pill}>{theoryCount} assuntos com teoria</span>}
           </div>
         )}
         {message && (
@@ -152,7 +175,7 @@ export function ConcursosDashboard() {
         )}
       </section>
 
-      <div role="tablist" aria-label="Áreas do VIRA Concursos" className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
+      <div role="tablist" aria-label="Áreas do VIRA Concursos" className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         {tabs.map((item) => (
           <button
             key={item.id}
@@ -161,7 +184,7 @@ export function ConcursosDashboard() {
             id={`concursos-tab-${item.id}`}
             aria-selected={tab === item.id}
             aria-controls={`concursos-panel-${item.id}`}
-            onClick={() => setTab(item.id)}
+            onClick={() => openTab(item.id)}
             className={`${tab === item.id ? tabTone.active : tabTone.idle} sm:px-5`}
           >
             {item.label}
@@ -169,9 +192,15 @@ export function ConcursosDashboard() {
         ))}
       </div>
 
+      {tab === "teoria" && (
+        <div role="tabpanel" id="concursos-panel-teoria" aria-labelledby="concursos-tab-teoria">
+          <ConcursosTheory topics={topics} initialTopicId={theoryTopicId} onPractice={practiceTopic} />
+        </div>
+      )}
+
       {tab === "estudo" && (
         <div role="tabpanel" id="concursos-panel-estudo" aria-labelledby="concursos-tab-estudo">
-          <StudySession topics={topics} />
+          <StudySession topics={topics} initialTopicIds={studyTopicIds} onOpenTheory={readTheory} />
         </div>
       )}
 
@@ -192,9 +221,9 @@ export function ConcursosDashboard() {
             <section className="grid items-start gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
               <div className={`${ui.card} space-y-3 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto`}>
                 <h2 className={ui.heading}>Tópicos</h2>
-                {topics.length === 0 && <p className={ui.muted}>Nenhum tópico cadastrado ainda.</p>}
+                {bankTopics.length === 0 && <p className={ui.muted}>Nenhum tópico cadastrado ainda.</p>}
                 <ul className="space-y-2">
-                  {topics.map((topic) => {
+                  {bankTopics.map((topic) => {
                     const active = selectedTopicId === topic.id;
                     return (
                       <li key={topic.id}>
@@ -240,7 +269,7 @@ export function ConcursosDashboard() {
                   <span className={ui.eyebrow}>Banco de questões</span>
                   <span className="mt-1 block text-base font-black text-slate-950 dark:text-white">Todas as questões</span>
                   <span className={`block ${ui.muted}`}>
-                    {topics.length} tópicos · {summary?.total_questions ?? 0} questões
+                    {bankTopics.length} tópicos · {summary?.total_questions ?? 0} questões
                   </span>
                 </span>
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-cyan-200 bg-cyan-50 text-cyan-800 dark:border-cyan-400/30 dark:bg-cyan-400/10 dark:text-cyan-200">
@@ -250,8 +279,8 @@ export function ConcursosDashboard() {
 
               {bankOpen && (
                 <ul id="concursos-bank" className="mt-4 space-y-2">
-                  {topics.length === 0 && <li className={ui.muted}>Nenhum tópico cadastrado ainda.</li>}
-                  {topics.map((topic) => {
+                  {bankTopics.length === 0 && <li className={ui.muted}>Nenhum tópico cadastrado ainda.</li>}
+                  {bankTopics.map((topic) => {
                     const open = selectedTopicId === topic.id;
                     return (
                       <li key={topic.id}>

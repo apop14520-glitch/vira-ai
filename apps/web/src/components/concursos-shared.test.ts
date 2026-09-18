@@ -9,6 +9,7 @@ const topic = (name: string): Topic => ({
   name,
   description: "",
   question_count: 1,
+  has_theory: false,
   created_at: "",
 });
 

@@ -1,20 +1,21 @@
 # Publicação híbrida no Cloudflare
 
 Este documento descreve a publicação do frontend do VIRA.AI no Cloudflare
-Workers mantendo a API e o banco no Railway. A estratégia é um preview isolado
-primeiro; o domínio principal só deve ser promovido depois da validação manual.
+Workers, com a API e o banco hospedados em um servidor próprio (Oracle Cloud).
+A estratégia é um preview isolado primeiro; o domínio principal só deve ser
+promovido depois da validação manual.
 
 ## Topologia ativa
 
-| Serviço | Plataforma | Responsabilidade | Origem inicial |
+| Serviço | Plataforma | Responsabilidade | Origem |
 | --- | --- | --- | --- |
 | `vira-ai-web` | Cloudflare Workers + OpenNext | Next.js, páginas e proxy same-origin | preview do Worker |
-| `vira-api` | Railway | FastAPI, autenticação, Business, Foursquare e persistência | `https://vira-api-production.up.railway.app` |
-| frontend atual | Railway | rollback operacional | `https://vira-ai-production.up.railway.app` |
+| `vira-api` | VM Oracle Cloud (systemd + Nginx) | FastAPI, autenticação, Business, Concursos e persistência | `https://137-131-255-128.nip.io` |
+| PostgreSQL | VM Oracle Cloud (local) | Persistência real, sobrevive a deploy/reboot | `127.0.0.1:5432` (não exposto publicamente) |
 
 O navegador chama apenas `/api/...` no próprio frontend. O Worker usa a
 variável server-side `API_INTERNAL_URL` para encaminhar as requisições ao
-domínio público da API Railway. Nenhum token de integração, senha, chave
+domínio público da API na VM. Nenhum token de integração, senha, chave
 Foursquare ou valor de `API_ACCESS_TOKEN` deve entrar no bundle do navegador.
 
 ## Pré-requisitos
@@ -22,11 +23,12 @@ Foursquare ou valor de `API_ACCESS_TOKEN` deve entrar no bundle do navegador.
 1. O código deve estar no repositório conectado ao Cloudflare, na branch
    `feat/admin-ui-cloudflare` para o primeiro preview.
 2. A API pública precisa responder em
-   `https://vira-api-production.up.railway.app/health`.
+   `https://137-131-255-128.nip.io/health`.
 3. A conta do Cloudflare deve estar autenticada no painel ou no ambiente de
    CI. A autenticação é manual; nunca coloque um token no repositório ou no
    chat.
-4. O serviço atual do Railway deve continuar disponível para rollback.
+4. A VM Oracle Cloud deve estar acessível via SSH para manutenção (`postgresql`,
+   `vira-api` e `nginx` rodam como serviços `systemd`, com restart automático).
 
 ## Configuração do Worker
 
@@ -39,7 +41,7 @@ O repositório declara em `apps/web/wrangler.jsonc` a origem pública padrão da
 API, que não é um segredo:
 
 ```text
-API_INTERNAL_URL=https://vira-api-production.up.railway.app
+API_INTERNAL_URL=https://137-131-255-128.nip.io
 ```
 
 Se preferir administrar a configuração pelo painel do Cloudflare, mantenha a
@@ -47,31 +49,32 @@ mesma variável `API_INTERNAL_URL` na versão ativa do Worker; a publicação us
 `--keep-vars` para preservar variáveis já configuradas. Use a URL base sem
 `/login`, `/api` ou `/health`. Não crie `NEXT_PUBLIC_API_INTERNAL_URL` e não coloque `API_ACCESS_TOKEN`,
 `ADMIN_ACCESS_TOKEN`, `ADMIN_INITIAL_PASSWORD` ou `FOURSQUARE_API_KEY` no
-Cloudflare Worker. Esses valores, quando necessários, pertencem ao serviço
-`vira-api` no Railway.
+Cloudflare Worker. Esses valores, quando necessários, pertencem ao arquivo
+`.env` do serviço `vira-api` na VM.
 
 Para criar o primeiro administrador pela página, configure
-`ADMIN_SETUP_TOKEN` **somente** como segredo no serviço `vira-api` do Railway,
+`ADMIN_SETUP_TOKEN` **somente** como segredo no `.env` do `vira-api` na VM,
 com `ADMIN_INITIAL_PASSWORD` vazio. Não inclua o código no Worker, no
 repositório nem em logs. `GET /api/v1/auth/setup-status` decide se `/login`
 mostra a ativação; `POST /api/v1/auth/setup` aceita os quatro campos e cria
 uma sessão HttpOnly. Depois da primeira credencial, o cadastro não pode ser
 repetido. Remova ou rotacione o código após a ativação.
 
-Antes da ativação, confirme que `DATABASE_URL` do `vira-api` aponta para um
-volume persistente no Railway. Um redeploy da API não deve recriar o banco nem
-apagar a credencial. Alterar `ADMIN_INITIAL_PASSWORD` posteriormente não
-redefine a senha já cadastrada.
+Antes da ativação, confirme que `DATABASE_URL` do `vira-api` aponta para o
+PostgreSQL local da VM (`postgresql://vira_api:...@127.0.0.1:5432/vira_api`).
+Um redeploy da API não deve recriar o banco nem apagar a credencial — o
+PostgreSQL roda como serviço `systemd` independente e sobrevive a reboot.
 
 Depois de configurar a variável no painel, confirme que `API_INTERNAL_URL`
 aparece entre as variáveis e associações da versão ativa do Worker. A presença
 do valor apenas no histórico de versões não garante que a publicação em
 produção consiga encaminhar requisições para a API.
 
-Não use `vira-api.railway.internal` nessa configuração. Um domínio
-`railway.internal` é privado à rede do Railway e não é resolvível pelo
-navegador nem por um Worker Cloudflare externo. Para esta topologia híbrida,
-use o domínio público da API Railway.
+O host `137-131-255-128.nip.io` resolve para o IP público da VM e carrega um
+certificado Let's Encrypt válido (HTTPS com redirect automático a partir de
+HTTP). Ao trocar de servidor ou obter um domínio próprio, atualize
+`API_INTERNAL_URL` em ambos os `wrangler.jsonc` (raiz e `apps/web/`) e nos
+testes de contrato em `apps/web/src/lib/cloudflare-package.test.ts`.
 
 ## Publicação pelo repositório conectado
 
@@ -135,7 +138,7 @@ checagem de artefatos para contornar o erro.
 Depois que o Cloudflare fornecer uma URL de preview, valide nesta ordem:
 
 1. `GET /login` exibe a tela de acesso.
-2. `GET /api/health` retorna o healthcheck da API Railway.
+2. `GET /api/health` retorna o healthcheck da API na VM Oracle Cloud.
 3. Se não existir administrador, `/login` mostra a ativação inicial. Se já
    existir, mostra o login; falha de conexão mantém o login utilizável.
 4. Uma senha incorreta mostra apenas `Usuário ou senha inválidos.` e não cria
@@ -146,23 +149,25 @@ Depois que o Cloudflare fornecer uma URL de preview, valide nesta ordem:
 7. O logout encerra a sessão; a próxima rota protegida volta a exigir login.
 8. O código-fonte do navegador e os assets públicos não contêm a origem da
    API server-side, tokens, senha ou chave Foursquare.
-9. O Railway continua respondendo durante todos os testes.
+9. A API na VM continua respondendo durante todos os testes.
 
 Se a API usar uma lista de CORS para alguma chamada direta adicional, inclua a
-origem pública ou de preview do frontend somente no serviço `vira-api`; o
+origem pública ou de preview do frontend somente no `.env` do `vira-api`; o
 fluxo normal deve continuar passando pelo proxy same-origin.
 
 ## Promoção e rollback
 
-Não troque o domínio principal na primeira publicação. Mantenha o frontend
-Railway disponível até concluir login, cookie, Business, Foursquare e
-rollback.
+Não troque o domínio principal na primeira publicação de uma mudança de
+infraestrutura. Valide login, cookie, Business, Concursos e o healthcheck
+antes de promover.
 
 Em caso de falha:
 
 1. pare ou remova a rota/domínio do preview Cloudflare;
-2. mantenha `https://vira-ai-production.up.railway.app` como frontend ativo;
-3. preserve o serviço `vira-api`, o banco e o volume no Railway;
+2. reverta `API_INTERNAL_URL` para o último valor conhecido-bom nos dois
+   `wrangler.jsonc` e republique o Worker;
+3. confirme que os serviços `postgresql`, `vira-api` e `nginx` continuam
+   ativos na VM (`systemctl status`);
 4. corrija a branch e gere outro preview antes de tentar novamente.
 
 Esse rollback não exige apagar banco, recriar volume, alterar a branch
@@ -172,10 +177,11 @@ testes.
 
 ## Próxima etapa fora deste escopo
 
-Mover o FastAPI para Python Workers ou trocar SQLite por uma persistência
-distribuída exige uma avaliação separada de ASGI, banco, sessões, auditoria,
-rate limit e armazenamento de segredos. A compatibilidade Python da Cloudflare
-é uma possibilidade futura, não parte desta publicação híbrida.
+Mover o FastAPI para Python Workers, migrar para outro provedor de VM ou
+trocar a topologia atual por algo totalmente gerenciado exige uma avaliação
+separada de ASGI, banco, sessões, auditoria, rate limit e armazenamento de
+segredos. A compatibilidade Python da Cloudflare é uma possibilidade futura,
+não parte desta publicação híbrida.
 
 Referências oficiais:
 

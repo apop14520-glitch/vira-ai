@@ -10,9 +10,6 @@ vi.mock("@/components/metric-card", () => ({
 vi.mock("@/components/module-card", () => ({
   ModuleCard: ({ module }: { module: { title: string } }) => <div>{module.title}</div>,
 }));
-vi.mock("@/components/system-status", () => ({
-  SystemStatus: () => <aside>Saúde da plataforma</aside>,
-}));
 
 import Home from "@/app/page";
 

@@ -3,87 +3,31 @@
 import { useEffect, useRef, useState } from "react";
 
 import { formatClock, optionText, optionsOf, percentage, useScrollIntoViewOnChange } from "@/components/concursos-shared";
-import { TopicPicker } from "@/components/concursos-topic-picker";
 import { choice, letter as letterTone, reviewCard, scoreTone, timerTone, ui } from "@/components/concursos-ui";
-import { concursosApi, ExamResult, QuestionOption, QuestionPublic, Topic } from "@/lib/concursos-api";
+import { concursosApi, ExamResult, QuestionOption, QuestionPublic } from "@/lib/concursos-api";
 
-type Phase = "setup" | "running" | "result";
+type Phase = "running" | "result";
 
-const MAX_QUESTIONS = 100;
-const MINUTES_PER_QUESTION = 2;
+type ExamRunnerProps = {
+  questions: QuestionPublic[];
+  /** Tempo da prova em minutos; 0 = sem limite. */
+  minutes: number;
+  onExit: () => void;
+};
 
-const isIntegratedExamTopic = (topic: Topic) => topic.name.trim().toLowerCase().startsWith("simulado");
-
-function MinutesField({ label, value, onChange }: { label: string; value: number; onChange: (minutes: number) => void }) {
-  return (
-    <label className={`flex flex-wrap items-center gap-3 ${ui.body} font-bold`}>
-      {label}
-      <input
-        type="number"
-        min={0}
-        value={value}
-        onChange={(event) => onChange(Math.max(0, Number(event.target.value) || 0))}
-        className={`w-24 ${ui.control}`}
-      />
-    </label>
-  );
-}
-
-export function ExamMode({ topics }: { topics: Topic[] }) {
-  const [phase, setPhase] = useState<Phase>("setup");
-  const [customTopicIds, setCustomTopicIds] = useState<string[]>([]);
-  const [customQuantity, setCustomQuantity] = useState(20);
-  const [integratedMinutes, setIntegratedMinutes] = useState<number | null>(null);
-  const [customMinutes, setCustomMinutes] = useState<number | null>(null);
-  const [questions, setQuestions] = useState<QuestionPublic[]>([]);
+/** Simulado: responde tudo primeiro, com cronômetro, e só vê o gabarito e a nota no final. */
+export function ExamRunner({ questions, minutes, onExit }: ExamRunnerProps) {
+  const timeLimitSeconds = Math.floor(minutes) * 60;
+  const [phase, setPhase] = useState<Phase>("running");
   const [answers, setAnswers] = useState<Record<string, QuestionOption>>({});
-  const [timeLimitSeconds, setTimeLimitSeconds] = useState(0);
-  const [remaining, setRemaining] = useState(0);
+  const [remaining, setRemaining] = useState(timeLimitSeconds);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ExamResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const startedAt = useRef(0);
+  const startedAt = useRef(Date.now());
   const rootRef = useScrollIntoViewOnChange(phase);
-
-  const integratedTopics = topics.filter((topic) => isIntegratedExamTopic(topic) && topic.question_count > 0);
-  const integratedTotal = Math.min(
-    MAX_QUESTIONS,
-    integratedTopics.reduce((sum, topic) => sum + topic.question_count, 0),
-  );
-  const integratedMinutesValue = integratedMinutes ?? integratedTotal * MINUTES_PER_QUESTION;
-
-  const customPool = topics.filter((topic) => customTopicIds.length === 0 || customTopicIds.includes(topic.id));
-  const customAvailable = customPool.reduce((sum, topic) => sum + topic.question_count, 0);
-  const customDrawn = Math.min(customQuantity, customAvailable);
-  const customMinutesValue = customMinutes ?? customDrawn * MINUTES_PER_QUESTION;
-
-  const begin = async (topicIds: string[], quantity: number, minutes: number) => {
-    setBusy(true);
-    setError(null);
-    try {
-      const drawn = await concursosApi.drawQuestions(topicIds, quantity);
-      if (drawn.length === 0) {
-        setError("Não há questões para montar o simulado.");
-        return;
-      }
-      const limit = Math.floor(minutes) * 60;
-      setQuestions(drawn);
-      setAnswers({});
-      setResult(null);
-      setConfirming(false);
-      setTimeLimitSeconds(limit);
-      setRemaining(limit);
-      startedAt.current = Date.now();
-      setPhase("running");
-    } catch (failure) {
-      setError((failure as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const finish = async () => {
     if (submitting) return;
@@ -130,83 +74,7 @@ export function ExamMode({ topics }: { topics: Topic[] }) {
 
   let content;
 
-  if (phase === "setup") {
-    content = (
-      <section className="space-y-4">
-        <div className={ui.card}>
-          <h2 className={ui.title}>Simulados</h2>
-          <p className={`mt-1 ${ui.muted}`}>
-            Prova com cronômetro: você responde tudo primeiro e só vê o gabarito e a nota no final.
-          </p>
-        </div>
-
-        <div className={`${ui.card} space-y-3`}>
-          <h3 className={ui.heading}>Simulado Integrado</h3>
-          {integratedTotal === 0 ? (
-            <p className={ui.muted}>Nenhum simulado integrado cadastrado ainda.</p>
-          ) : (
-            <>
-              <p className={ui.muted}>{integratedTotal} questões de vários assuntos, em ordem aleatória.</p>
-              <MinutesField
-                label="Tempo do simulado integrado (minutos, 0 = sem limite)"
-                value={integratedMinutesValue}
-                onChange={setIntegratedMinutes}
-              />
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => begin(integratedTopics.map((topic) => topic.id), integratedTotal, integratedMinutesValue)}
-                className={`${ui.primaryButton} w-full sm:w-auto`}
-              >
-                Iniciar Simulado Integrado
-              </button>
-            </>
-          )}
-        </div>
-
-        <div className={`${ui.card} space-y-4`}>
-          <h3 className={ui.heading}>Simulado personalizado</h3>
-          <TopicPicker
-            legend="Assuntos (nenhum marcado = todos)"
-            topics={topics}
-            selectedIds={customTopicIds}
-            onChange={setCustomTopicIds}
-          />
-          <p className={ui.muted}>{customAvailable} questões disponíveis nos assuntos escolhidos.</p>
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-6">
-            <label className={`flex flex-wrap items-center gap-3 ${ui.body} font-bold`}>
-              Quantidade de questões
-              <input
-                type="number"
-                min={1}
-                max={MAX_QUESTIONS}
-                value={customQuantity}
-                onChange={(event) =>
-                  setCustomQuantity(Math.min(MAX_QUESTIONS, Math.max(1, Number(event.target.value) || 1)))
-                }
-                className={`w-24 ${ui.control}`}
-              />
-            </label>
-            <MinutesField
-              label="Tempo do simulado personalizado (minutos, 0 = sem limite)"
-              value={customMinutesValue}
-              onChange={setCustomMinutes}
-            />
-          </div>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => begin(customTopicIds, customQuantity, customMinutesValue)}
-            className={`${ui.primaryButton} w-full sm:w-auto`}
-          >
-            Iniciar simulado personalizado
-          </button>
-        </div>
-
-        {error && <p role="alert" className={ui.alert}>{error}</p>}
-      </section>
-    );
-  } else if (phase === "result" && result) {
+  if (phase === "result" && result) {
     const byId = new Map(result.results.map((item) => [item.question_id, item]));
     const score = percentage(result.correct, result.total);
     const tone = score >= 70 ? scoreTone.good : score >= 50 ? scoreTone.fair : scoreTone.poor;
@@ -250,7 +118,7 @@ export function ExamMode({ topics }: { topics: Topic[] }) {
             );
           })}
         </div>
-        <button type="button" onClick={() => setPhase("setup")} className={`${ui.primaryButton} w-full sm:w-auto`}>
+        <button type="button" onClick={onExit} className={`${ui.primaryButton} w-full sm:w-auto`}>
           Novo simulado
         </button>
       </section>

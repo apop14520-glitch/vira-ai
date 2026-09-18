@@ -1,5 +1,7 @@
 "use client";
 
+import { FilterGroup } from "@/components/concursos-filter";
+import { isExamTopic } from "@/components/concursos-shared";
 import { ui } from "@/components/concursos-ui";
 import type { Topic } from "@/lib/concursos-api";
 
@@ -10,46 +12,52 @@ type TopicPickerProps = {
   legend: string;
 };
 
-const itemClass =
-  "flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-cyan-400 hover:bg-cyan-50 has-[:checked]:border-cyan-500 has-[:checked]:bg-cyan-100 has-[:checked]:text-cyan-950 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-cyan-400/60 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:border-cyan-400/50 dark:hover:bg-cyan-400/10 dark:has-[:checked]:border-cyan-400/60 dark:has-[:checked]:bg-cyan-400/15 dark:has-[:checked]:text-cyan-100";
+const asOption = (topic: Topic) => ({ id: topic.id, label: topic.name, count: topic.question_count });
 
+/** Escolha de assuntos em dois grupos de filtro: os assuntos do manual e, agrupadas à parte, as questões dos simulados. */
 export function TopicPicker({ topics, selectedIds, onChange, legend }: TopicPickerProps) {
   const available = topics.filter((topic) => topic.question_count > 0);
+  const subjects = available.filter((topic) => !isExamTopic(topic));
+  const exams = available.filter(isExamTopic);
 
-  const toggle = (topicId: string) => {
-    onChange(selectedIds.includes(topicId) ? selectedIds.filter((id) => id !== topicId) : [...selectedIds, topicId]);
+  const changeGroup = (group: Topic[]) => (next: string[]) => {
+    const groupIds = new Set(group.map((topic) => topic.id));
+    onChange([...selectedIds.filter((id) => !groupIds.has(id)), ...next]);
   };
 
   return (
-    <fieldset className="space-y-3">
-      <legend className={ui.heading}>{legend}</legend>
-      <div className="flex gap-4">
-        <button type="button" onClick={() => onChange(available.map((topic) => topic.id))} className={ui.linkButton}>
-          Marcar todos
-        </button>
-        <button type="button" onClick={() => onChange([])} className={ui.linkButton}>
-          Limpar seleção
-        </button>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <h3 className={ui.heading}>{legend}</h3>
+        <div className="flex gap-4">
+          <button type="button" onClick={() => onChange(available.map((topic) => topic.id))} className={ui.linkButton}>
+            Marcar todos
+          </button>
+          <button type="button" onClick={() => onChange([])} className={ui.linkButton}>
+            Limpar seleção
+          </button>
+        </div>
       </div>
       {available.length === 0 && <p className={ui.muted}>Nenhum tópico com questões cadastradas.</p>}
-      <ul className="grid gap-2 sm:grid-cols-2">
-        {available.map((topic) => (
-          <li key={topic.id}>
-            <label className={itemClass}>
-              <span className="flex min-w-0 items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(topic.id)}
-                  onChange={() => toggle(topic.id)}
-                  className={`h-4 w-4 shrink-0 ${ui.accent}`}
-                />
-                <span className="min-w-0">{topic.name}</span>
-              </span>
-              <span className="shrink-0 text-xs font-bold text-slate-600 dark:text-slate-400">{topic.question_count}</span>
-            </label>
-          </li>
-        ))}
-      </ul>
-    </fieldset>
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-3 lg:grid-cols-2">
+        {subjects.length > 0 && (
+          <FilterGroup
+            title="Assuntos"
+            searchPlaceholder="Buscar assunto"
+            options={subjects.map(asOption)}
+            selected={selectedIds.filter((id) => subjects.some((topic) => topic.id === id))}
+            onChange={changeGroup(subjects)}
+          />
+        )}
+        {exams.length > 0 && (
+          <FilterGroup
+            title="Simulados"
+            options={exams.map(asOption)}
+            selected={selectedIds.filter((id) => exams.some((topic) => topic.id === id))}
+            onChange={changeGroup(exams)}
+          />
+        )}
+      </div>
+    </div>
   );
 }

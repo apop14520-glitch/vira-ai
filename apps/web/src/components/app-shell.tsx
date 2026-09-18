@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import { AuthGate } from "@/components/auth-gate";
 import { PreferencesMenu } from "@/components/preferences-menu";
-import { SystemStatus } from "@/components/system-status";
+import { SiteFooter } from "@/components/site-footer";
 import { logout as logoutSession } from "@/lib/auth-api";
 
 const navigation = [
@@ -83,7 +83,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
         </>}
 
         <main className="mx-auto max-w-[1440px] px-4 pb-7 pt-0 sm:px-6 sm:py-10 lg:px-8">{children}</main>
-        <SystemStatus />
+        <SiteFooter />
       </div>
     </AuthGate>
   );

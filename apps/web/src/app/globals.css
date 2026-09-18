@@ -12,6 +12,14 @@ html[data-theme="dark"] {
 
 html {
   background: #020617;
+  /* Escala geral do site: tudo em rem encolhe junto (celular 15px, tablet e PC 14,4px). */
+  font-size: 93.75%;
+}
+
+@media (min-width: 640px) {
+  html {
+    font-size: 90%;
+  }
 }
 
 html[data-theme="light"] {

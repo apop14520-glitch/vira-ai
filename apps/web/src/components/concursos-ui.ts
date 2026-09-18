@@ -113,6 +113,25 @@ export const theory = {
   },
 } as const;
 
+export const filter = {
+  card: "rounded-xl border border-slate-300 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/40",
+  header:
+    "flex w-full items-center justify-between gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60",
+  title: "flex items-center gap-2 text-base font-bold text-slate-800 dark:text-slate-100",
+  badge: "rounded-full bg-cyan-500 px-2 py-0.5 text-[11px] font-black text-slate-950",
+  chevron: "text-cyan-600 dark:text-cyan-300",
+  searchWrap: "relative mt-3",
+  searchIcon: "pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600 dark:text-slate-400",
+  search:
+    "w-full rounded-lg border border-slate-400 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none placeholder:text-slate-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-400/40 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500",
+  list: "mt-3 max-h-72 space-y-0.5 overflow-y-auto pr-1",
+  option:
+    "flex cursor-pointer items-center gap-3 rounded-lg px-1.5 py-1.5 text-sm text-slate-800 transition hover:bg-cyan-50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-cyan-400/60 dark:text-slate-200 dark:hover:bg-cyan-400/10",
+  checkbox: "h-5 w-5 shrink-0 cursor-pointer rounded border-2 accent-cyan-600 dark:accent-cyan-400",
+  count: "ml-auto shrink-0 text-xs font-bold text-slate-600 dark:text-slate-400",
+  chip: "inline-flex items-center gap-1.5 rounded-full border border-cyan-300 bg-cyan-50 py-1 pl-3 pr-1.5 text-xs font-bold text-cyan-950 dark:border-cyan-400/40 dark:bg-cyan-400/10 dark:text-cyan-100",
+} as const;
+
 export const timerTone = {
   calm: "text-cyan-800 dark:text-cyan-200",
   warning: "text-amber-700 dark:text-amber-300",

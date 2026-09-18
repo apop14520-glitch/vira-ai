@@ -22,6 +22,15 @@ describe("AppShell", () => {
     expect(screen.queryByText("Workspace local")).not.toBeInTheDocument();
   });
 
+  it("alinha as bordas do cabeçalho com as do conteúdo em qualquer largura de tela", () => {
+    render(<AppShell><div>Conteúdo</div></AppShell>);
+
+    const headerInner = screen.getByRole("banner").firstElementChild as HTMLElement;
+    for (const container of [headerInner, screen.getByRole("main")]) {
+      expect(container).toHaveClass("mx-auto", "max-w-[1440px]", "px-4", "sm:px-6", "lg:px-8");
+    }
+  });
+
   it("mantém o conteúdo encostado ao cabeçalho no celular sem perder o espaçamento inferior", () => {
     render(<AppShell><div>Conteúdo</div></AppShell>);
 

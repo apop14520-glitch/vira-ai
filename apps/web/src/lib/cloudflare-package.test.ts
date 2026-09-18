@@ -37,7 +37,7 @@ describe("contrato de build Cloudflare", () => {
 
     expect(rootWrangler.main).toBe("apps/web/.open-next/worker.js");
     expect(rootWrangler.assets?.directory).toBe("apps/web/.open-next/assets");
-    expect(rootWrangler.vars?.API_INTERNAL_URL).toBe("https://vira-api-production.up.railway.app");
+    expect(rootWrangler.vars?.API_INTERNAL_URL).toBe("https://137-131-255-128.nip.io");
   });
 
   it("verifica artefatos antes de publicar", () => {
@@ -53,7 +53,7 @@ describe("contrato de build Cloudflare", () => {
       vars?: Record<string, string>;
     };
 
-    expect(wrangler.vars?.API_INTERNAL_URL).toBe("https://vira-api-production.up.railway.app");
+    expect(wrangler.vars?.API_INTERNAL_URL).toBe("https://137-131-255-128.nip.io");
   });
 
   it("documenta a topologia híbrida e o rollback", () => {
@@ -63,11 +63,10 @@ describe("contrato de build Cloudflare", () => {
     for (const requiredText of [
       "vira-ai-web",
       "API_INTERNAL_URL",
-      "vira-api-production.up.railway.app",
+      "137-131-255-128.nip.io",
       "feat/admin-ui-cloudflare",
       "pnpm --dir apps/web exec wrangler versions upload",
       "rollback",
-      "railway.internal",
     ]) {
       expect(documentation).toContain(requiredText);
     }

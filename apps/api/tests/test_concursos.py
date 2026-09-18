@@ -148,3 +148,101 @@ def test_question_requires_an_existing_topic() -> None:
             },
         )
         assert response.status_code == 404
+
+
+def _create_question(client: TestClient, topic_id: str, statement: str, correct: str, explanation: str = "") -> dict:
+    response = client.post(
+        "/api/v1/concursos/questions",
+        json={
+            "topic_id": topic_id,
+            "statement": statement,
+            "option_a": "A",
+            "option_b": "B",
+            "option_c": "C",
+            "option_d": "D",
+            "correct_option": correct,
+            "explanation": explanation,
+        },
+    )
+    assert response.status_code == 201
+    return response.json()
+
+
+def test_study_mode_draws_from_chosen_topics_and_gives_instant_feedback() -> None:
+    suffix = uuid4().hex[:8]
+    with TestClient(app) as client:
+        topic_a = client.post("/api/v1/concursos/topics", json={"name": f"Estudo A {suffix}"}).json()["id"]
+        topic_b = client.post("/api/v1/concursos/topics", json={"name": f"Estudo B {suffix}"}).json()["id"]
+        first = _create_question(client, topic_a, "Pergunta do primeiro tópico de estudo?", "b", "Porque B.")
+        _create_question(client, topic_b, "Pergunta do segundo tópico de estudo?", "c")
+
+        drawn = client.post("/api/v1/concursos/questions/draw", json={"topic_ids": [topic_a], "quantity": 10})
+        assert drawn.status_code == 200
+        assert [item["id"] for item in drawn.json()] == [first["id"]]
+        assert "correct_option" not in drawn.json()[0]
+
+        both = client.post("/api/v1/concursos/questions/draw", json={"topic_ids": [topic_a, topic_b], "quantity": 10})
+        assert len(both.json()) == 2
+
+        wrong = client.post(
+            "/api/v1/concursos/questions/check", json={"question_id": first["id"], "selected_option": "a"}
+        )
+        assert wrong.status_code == 200
+        assert wrong.json()["is_correct"] is False
+        assert wrong.json()["correct_option"] == "b"
+        assert wrong.json()["explanation"] == "Porque B."
+
+        right = client.post(
+            "/api/v1/concursos/questions/check", json={"question_id": first["id"], "selected_option": "b"}
+        )
+        assert right.json()["is_correct"] is True
+
+
+def test_check_answer_rejects_unknown_question() -> None:
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/concursos/questions/check", json={"question_id": str(uuid4()), "selected_option": "a"}
+        )
+        assert response.status_code == 404
+
+
+def test_exam_is_graded_across_topics_and_audited() -> None:
+    suffix = uuid4().hex[:8]
+    with TestClient(app) as client:
+        topic_a = client.post("/api/v1/concursos/topics", json={"name": f"Prova A {suffix}"}).json()["id"]
+        topic_b = client.post("/api/v1/concursos/topics", json={"name": f"Prova B {suffix}"}).json()["id"]
+        first = _create_question(client, topic_a, "Questão da prova vinda do tópico A?", "a")
+        second = _create_question(client, topic_b, "Questão da prova vinda do tópico B?", "d", "Porque D.")
+        third = _create_question(client, topic_b, "Questão da prova deixada em branco?", "c")
+
+        submitted = client.post(
+            "/api/v1/concursos/exams/submit",
+            json={
+                "answers": [
+                    {"question_id": first["id"], "selected_option": "a"},
+                    {"question_id": second["id"], "selected_option": "b"},
+                ],
+                "blank_question_ids": [third["id"]],
+            },
+        )
+        assert submitted.status_code == 200
+        result = submitted.json()
+        assert result["total"] == 3
+        assert result["correct"] == 1
+        assert result["blank"] == 1
+        assert [item["is_correct"] for item in result["results"]] == [True, False, False]
+        blank_item = result["results"][2]
+        assert blank_item["selected_option"] is None
+        assert blank_item["correct_option"] == "c"
+
+        actions = [event["action"] for event in client.get("/api/v1/concursos/audit").json()]
+        assert "exam.completed" in actions
+
+        missing = client.post(
+            "/api/v1/concursos/exams/submit",
+            json={"answers": [{"question_id": str(uuid4()), "selected_option": "a"}]},
+        )
+        assert missing.status_code == 404
+
+        empty = client.post("/api/v1/concursos/exams/submit", json={"answers": [], "blank_question_ids": []})
+        assert empty.status_code == 422

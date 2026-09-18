@@ -314,20 +314,105 @@ class SQLiteConcursosRepository:
                 (str(organization_id), str(topic_id)),
             ).fetchall()
         sample = random.sample(rows, k=min(quantity, len(rows)))
-        return [
-            QuestionPublic(
-                id=UUID(row["id"]),
-                topic_id=UUID(row["topic_id"]),
-                statement=row["statement"],
-                option_a=row["option_a"],
-                option_b=row["option_b"],
-                option_c=row["option_c"],
-                option_d=row["option_d"],
-                option_e=row["option_e"],
-                difficulty=row["difficulty"],
+        return [self._question_public_from_row(row) for row in sample]
+
+    @staticmethod
+    def _question_public_from_row(row: sqlite3.Row) -> QuestionPublic:
+        return QuestionPublic(
+            id=UUID(row["id"]),
+            topic_id=UUID(row["topic_id"]),
+            statement=row["statement"],
+            option_a=row["option_a"],
+            option_b=row["option_b"],
+            option_c=row["option_c"],
+            option_d=row["option_d"],
+            option_e=row["option_e"],
+            difficulty=row["difficulty"],
+        )
+
+    def draw_questions(
+        self, organization_id: UUID, topic_ids: list[UUID], quantity: int
+    ) -> list[QuestionPublic]:
+        """Draw a random set of questions, optionally restricted to some topics."""
+
+        with self.database.connect() as connection:
+            if topic_ids:
+                rows = []
+                for topic_id in dict.fromkeys(topic_ids):
+                    rows.extend(
+                        connection.execute(
+                            "SELECT * FROM concursos_questions WHERE organization_id = ? AND topic_id = ?",
+                            (str(organization_id), str(topic_id)),
+                        ).fetchall()
+                    )
+            else:
+                rows = connection.execute(
+                    "SELECT * FROM concursos_questions WHERE organization_id = ?",
+                    (str(organization_id),),
+                ).fetchall()
+        sample = random.sample(rows, k=min(quantity, len(rows)))
+        return [self._question_public_from_row(row) for row in sample]
+
+    def check_answer(
+        self, organization_id: UUID, question_id: UUID, selected_option: str
+    ) -> dict[str, object]:
+        """Grade a single answer so study mode can show feedback right away."""
+
+        with self.database.connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM concursos_questions WHERE id = ? AND organization_id = ?",
+                (str(question_id), str(organization_id)),
+            ).fetchone()
+        if row is None:
+            raise QuestionNotFoundError
+        return {
+            "question_id": question_id,
+            "selected_option": selected_option,
+            "correct_option": row["correct_option"],
+            "is_correct": row["correct_option"] == selected_option,
+            "explanation": row["explanation"],
+        }
+
+    def grade_exam(
+        self,
+        organization_id: UUID,
+        answers: list[tuple[UUID, str]],
+        blank_question_ids: list[UUID],
+        audit_context: AuditContext | None = None,
+    ) -> tuple[int, int, list[dict[str, object]]]:
+        """Grade an exam whose questions may come from several topics.
+
+        Blank questions still count in the total and are returned with their answer key.
+        """
+
+        graded: list[tuple[UUID, str | None]] = [*answers, *((question_id, None) for question_id in blank_question_ids)]
+        with self.database.connect() as connection:
+            results: list[dict[str, object]] = []
+            correct_count = 0
+            for question_id, selected_option in graded:
+                row = connection.execute(
+                    "SELECT * FROM concursos_questions WHERE id = ? AND organization_id = ?",
+                    (str(question_id), str(organization_id)),
+                ).fetchone()
+                if row is None:
+                    raise QuestionNotFoundError
+                is_correct = selected_option is not None and row["correct_option"] == selected_option
+                if is_correct:
+                    correct_count += 1
+                results.append(
+                    {
+                        "question_id": question_id,
+                        "selected_option": selected_option,
+                        "correct_option": row["correct_option"],
+                        "is_correct": is_correct,
+                        "explanation": row["explanation"],
+                    }
+                )
+            self._audit(
+                connection, organization_id, "exam.completed", "concursos_exam", organization_id,
+                {"total": len(graded), "correct": correct_count, "blank": len(blank_question_ids)}, audit_context,
             )
-            for row in sample
-        ]
+        return len(graded), correct_count, results
 
     def grade_quiz(
         self,

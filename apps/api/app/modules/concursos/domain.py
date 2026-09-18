@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class QuestionDifficulty(StrEnum):
@@ -135,6 +135,43 @@ class QuizResult(BaseModel):
     total: int
     correct: int
     results: list[QuizAnswerResult]
+
+
+class DrawRequest(BaseModel):
+    """Ask for a random set of questions; no topics means the whole bank."""
+
+    topic_ids: list[UUID] = Field(default_factory=list, max_length=100)
+    quantity: int = Field(default=10, ge=1, le=100)
+
+
+class ExamSubmission(BaseModel):
+    """Answers of an exam; questions left unanswered are listed apart so they still count."""
+
+    answers: list[QuizAnswer] = Field(default_factory=list, max_length=100)
+    blank_question_ids: list[UUID] = Field(default_factory=list, max_length=100)
+
+    @model_validator(mode="after")
+    def require_some_question(self) -> "ExamSubmission":
+        if not self.answers and not self.blank_question_ids:
+            raise ValueError("O simulado precisa ter ao menos uma questão.")
+        return self
+
+
+class ExamAnswerResult(BaseModel):
+    question_id: UUID
+    selected_option: QuestionOption | None
+    correct_option: QuestionOption
+    is_correct: bool
+    explanation: str
+
+
+class ExamResult(BaseModel):
+    """Result of an exam that may span several topics; blanks count as not correct."""
+
+    total: int
+    correct: int
+    blank: int
+    results: list[ExamAnswerResult]
 
 
 class ConcursosSummary(BaseModel):

@@ -27,6 +27,9 @@ export function percentage(correct: number, total: number): number {
   return total === 0 ? 0 : Math.round((correct / total) * 100);
 }
 
+/** Os tópicos "Simulado ..." guardam as questões das provas integradas, separadas dos assuntos do manual. */
+export const isExamTopic = (topic: Topic) => topic.name.trim().toLowerCase().startsWith("simulado");
+
 /** "Parte 1" a "Parte 28" em ordem numérica; o que não é "Parte N" (os simulados) vem depois. */
 export function sortTopics(topics: Topic[]): Topic[] {
   return [...topics].sort((a, b) => {

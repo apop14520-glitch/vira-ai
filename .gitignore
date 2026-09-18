@@ -13,6 +13,11 @@ __pycache__/
 .ruff_cache/
 .venv/
 venv/
+.venv-semgrep/
+
+# Platform-specific Agent Skills links (junctions/symlinks); .agents/skills/
+# holds the portable content. Run `npx skills add semgrep/skills` to relink.
+.claude/
 .runtime/
 *.egg-info/
 

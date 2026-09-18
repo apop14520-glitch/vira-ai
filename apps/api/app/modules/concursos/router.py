@@ -18,6 +18,8 @@ from app.modules.concursos.domain import (
     QuizAnswerResult,
     QuizResult,
     QuizSubmission,
+    TheoryDocument,
+    TheoryImportResult,
     Topic,
     TopicCreate,
 )
@@ -59,6 +61,34 @@ def create_topic(request: Request, payload: TopicCreate, principal: Principal = 
 def delete_topic(request: Request, topic_id: UUID, principal: Principal = Depends(get_admin_principal)) -> None:
     try:
         repository(request).delete_topic(principal.organization_id, topic_id, audit_context(request, principal))
+    except TopicNotFoundError as error:
+        raise HTTPException(status_code=404, detail="Tópico não encontrado.") from error
+
+
+@router.get("/topics/{topic_id}/theory", response_model=TheoryDocument)
+def get_theory(
+    request: Request, topic_id: UUID, principal: Principal = Depends(get_current_principal)
+) -> TheoryDocument:
+    try:
+        document = repository(request).get_theory(principal.organization_id, topic_id)
+    except TopicNotFoundError as error:
+        raise HTTPException(status_code=404, detail="Tópico não encontrado.") from error
+    if document is None:
+        raise HTTPException(status_code=404, detail="Este tópico ainda não tem teoria.")
+    return document
+
+
+@router.put("/topics/{topic_id}/theory", response_model=TheoryImportResult)
+def save_theory(
+    request: Request,
+    topic_id: UUID,
+    payload: TheoryDocument,
+    principal: Principal = Depends(get_admin_principal),
+) -> TheoryImportResult:
+    try:
+        return repository(request).save_theory(
+            principal.organization_id, topic_id, payload, audit_context(request, principal)
+        )
     except TopicNotFoundError as error:
         raise HTTPException(status_code=404, detail="Tópico não encontrado.") from error
 

@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from enum import StrEnum
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -47,6 +48,7 @@ class Topic(BaseModel):
     name: str
     description: str
     question_count: int
+    has_theory: bool = False
     created_at: datetime
 
 
@@ -172,6 +174,71 @@ class ExamResult(BaseModel):
     correct: int
     blank: int
     results: list[ExamAnswerResult]
+
+
+class TheoryParagraph(BaseModel):
+    type: Literal["paragraph"]
+    text: str = Field(min_length=1, max_length=4000)
+
+
+class TheoryDefinition(BaseModel):
+    """Termo com a sua definição curta (uma frase)."""
+
+    type: Literal["definition"]
+    term: str = Field(min_length=1, max_length=200)
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class TheoryCallout(BaseModel):
+    """Caixa de destaque do manual ("Importante lembrar!")."""
+
+    type: Literal["callout"]
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class TheoryTable(BaseModel):
+    type: Literal["table"]
+    caption: str = Field(default="", max_length=200)
+    header: list[Annotated[str, Field(max_length=300)]] = Field(min_length=1, max_length=10)
+    rows: list[list[Annotated[str, Field(max_length=500)]]] = Field(min_length=1, max_length=60)
+
+    @model_validator(mode="after")
+    def rows_match_header(self) -> "TheoryTable":
+        if any(len(row) != len(self.header) for row in self.rows):
+            raise ValueError("Toda linha da tabela precisa ter o mesmo número de colunas do cabeçalho.")
+        return self
+
+
+TheoryBlock = Annotated[
+    TheoryParagraph | TheoryDefinition | TheoryCallout | TheoryTable, Field(discriminator="type")
+]
+
+
+class TheorySection(BaseModel):
+    heading: str = Field(default="", max_length=200)
+    blocks: list[TheoryBlock] = Field(min_length=1, max_length=60)
+
+
+class TheoryChapter(BaseModel):
+    number: str = Field(default="", max_length=10)
+    title: str = Field(min_length=1, max_length=200)
+    objective: str = Field(default="", max_length=1000)
+    sections: list[TheorySection] = Field(min_length=1, max_length=40)
+    review: list[Annotated[str, Field(min_length=1, max_length=1000)]] = Field(default_factory=list, max_length=30)
+
+
+class TheoryDocument(BaseModel):
+    """Teoria de um tópico, importada do manual: capítulos, seções e blocos tipados."""
+
+    summary: str = Field(default="", max_length=2000)
+    sources: str = Field(default="", max_length=2000)
+    chapters: list[TheoryChapter] = Field(min_length=1, max_length=40)
+
+
+class TheoryImportResult(BaseModel):
+    topic_id: UUID
+    chapters: int
+    updated_at: datetime
 
 
 class ConcursosSummary(BaseModel):

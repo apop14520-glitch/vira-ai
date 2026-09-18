@@ -3,47 +3,26 @@
 import { useState } from "react";
 
 import { optionText, optionsOf, percentage, useScrollIntoViewOnChange } from "@/components/concursos-shared";
-import { TopicPicker } from "@/components/concursos-topic-picker";
 import { choice, letter as letterTone, reviewCard, scoreTone, ui, verdict } from "@/components/concursos-ui";
-import { concursosApi, QuestionOption, QuestionPublic, QuizAnswerResult, Topic } from "@/lib/concursos-api";
+import { concursosApi, QuestionOption, QuestionPublic, QuizAnswerResult } from "@/lib/concursos-api";
 
-type Phase = "setup" | "running" | "done";
+type Phase = "running" | "done";
 type Attempt = { question: QuestionPublic; result: QuizAnswerResult };
 
-const QUANTITIES = [5, 10, 20, 50];
+type StudyRunnerProps = {
+  questions: QuestionPublic[];
+  onExit: () => void;
+};
 
-export function StudySession({ topics }: { topics: Topic[] }) {
-  const [phase, setPhase] = useState<Phase>("setup");
-  const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
-  const [quantity, setQuantity] = useState(10);
-  const [questions, setQuestions] = useState<QuestionPublic[]>([]);
+/** Sessão de estudo: uma questão por vez, com gabarito e explicação logo depois de responder. */
+export function StudyRunner({ questions, onExit }: StudyRunnerProps) {
+  const [phase, setPhase] = useState<Phase>("running");
   const [index, setIndex] = useState(0);
   const [feedback, setFeedback] = useState<QuizAnswerResult | null>(null);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const rootRef = useScrollIntoViewOnChange(`${phase}-${index}`);
-
-  const start = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const drawn = await concursosApi.drawQuestions(selectedTopicIds, quantity);
-      if (drawn.length === 0) {
-        setError("Não há questões nos tópicos escolhidos.");
-        return;
-      }
-      setQuestions(drawn);
-      setIndex(0);
-      setFeedback(null);
-      setAttempts([]);
-      setPhase("running");
-    } catch (failure) {
-      setError((failure as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const answer = async (option: QuestionOption) => {
     if (feedback || busy) return;
@@ -75,37 +54,7 @@ export function StudySession({ topics }: { topics: Topic[] }) {
 
   let content;
 
-  if (phase === "setup") {
-    content = (
-      <section className={`${ui.card} space-y-5`}>
-        <div>
-          <h2 className={ui.title}>Sessão de estudo</h2>
-          <p className={`mt-1 ${ui.muted}`}>
-            Resolva uma questão por vez e veja o gabarito com a explicação logo depois de responder. Sem cronômetro e
-            sem nota: o objetivo é aprender.
-          </p>
-        </div>
-        <TopicPicker
-          legend="Assuntos (nenhum marcado = todos)"
-          topics={topics}
-          selectedIds={selectedTopicIds}
-          onChange={setSelectedTopicIds}
-        />
-        <label className={`flex flex-wrap items-center gap-3 ${ui.body} font-bold`}>
-          Quantidade de questões
-          <select value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} className={ui.control}>
-            {QUANTITIES.map((value) => (
-              <option key={value} value={value}>{value}</option>
-            ))}
-          </select>
-        </label>
-        {error && <p role="alert" className={ui.alert}>{error}</p>}
-        <button type="button" onClick={start} disabled={busy} className={`${ui.primaryButton} w-full sm:w-auto`}>
-          Começar sessão
-        </button>
-      </section>
-    );
-  } else if (phase === "done") {
+  if (phase === "done") {
     const missed = attempts.filter((attempt) => !attempt.result.is_correct);
     const tone = score >= 70 ? scoreTone.good : score >= 50 ? scoreTone.fair : scoreTone.poor;
     content = (
@@ -131,7 +80,7 @@ export function StudySession({ topics }: { topics: Topic[] }) {
             ))}
           </div>
         )}
-        <button type="button" onClick={() => setPhase("setup")} className={`${ui.primaryButton} w-full sm:w-auto`}>
+        <button type="button" onClick={onExit} className={`${ui.primaryButton} w-full sm:w-auto`}>
           Nova sessão
         </button>
       </section>

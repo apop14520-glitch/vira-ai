@@ -7,8 +7,27 @@ export type Topic = {
   name: string;
   description: string;
   question_count: number;
+  has_theory: boolean;
   created_at: string;
 };
+
+export type TheoryBlock =
+  | { type: "paragraph"; text: string }
+  | { type: "definition"; term: string; text: string }
+  | { type: "callout"; text: string }
+  | { type: "table"; caption: string; header: string[]; rows: string[][] };
+
+export type TheorySection = { heading: string; blocks: TheoryBlock[] };
+
+export type TheoryChapter = {
+  number: string;
+  title: string;
+  objective: string;
+  sections: TheorySection[];
+  review: string[];
+};
+
+export type Theory = { summary: string; sources: string; chapters: TheoryChapter[] };
 
 export type Question = {
   id: string;
@@ -78,6 +97,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const concursosApi = {
   listTopics: () => request<Topic[]>("/topics"),
+  getTheory: (topicId: string) => request<Theory>(`/topics/${topicId}/theory`),
   listQuestions: (topicId?: string) =>
     request<Question[]>(`/questions${topicId ? `?topic_id=${topicId}` : ""}`),
   drawQuestions: (topicIds: string[], quantity: number) =>

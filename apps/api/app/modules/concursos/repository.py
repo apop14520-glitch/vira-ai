@@ -14,6 +14,8 @@ from app.modules.concursos.domain import (
     Question,
     QuestionCreate,
     QuestionPublic,
+    TheoryDocument,
+    TheoryImportResult,
     Topic,
     TopicCreate,
 )
@@ -71,6 +73,13 @@ class SQLiteConcursosRepository:
                 );
                 CREATE INDEX IF NOT EXISTS idx_concursos_questions_topic
                     ON concursos_questions (organization_id, topic_id);
+                CREATE TABLE IF NOT EXISTS concursos_theory (
+                    organization_id TEXT NOT NULL,
+                    topic_id TEXT NOT NULL,
+                    content_json TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    PRIMARY KEY (organization_id, topic_id)
+                );
                 CREATE TABLE IF NOT EXISTS concursos_audit_events (
                     id TEXT PRIMARY KEY,
                     organization_id TEXT NOT NULL,
@@ -107,13 +116,14 @@ class SQLiteConcursosRepository:
         return " ".join(value.casefold().split())
 
     @staticmethod
-    def _topic_from_row(row: sqlite3.Row, question_count: int) -> Topic:
+    def _topic_from_row(row: sqlite3.Row, question_count: int, has_theory: bool = False) -> Topic:
         return Topic(
             id=UUID(row["id"]),
             organization_id=UUID(row["organization_id"]),
             name=row["name"],
             description=row["description"],
             question_count=question_count,
+            has_theory=has_theory,
             created_at=datetime.fromisoformat(row["created_at"]),
         )
 
@@ -206,10 +216,65 @@ class SQLiteConcursosRepository:
                 "SELECT * FROM concursos_topics WHERE organization_id = ? ORDER BY name ASC",
                 (str(organization_id),),
             ).fetchall()
+            with_theory = {
+                row["topic_id"]
+                for row in connection.execute(
+                    "SELECT topic_id FROM concursos_theory WHERE organization_id = ?", (str(organization_id),)
+                ).fetchall()
+            }
             return [
-                self._topic_from_row(row, self._question_count(connection, organization_id, UUID(row["id"])))
+                self._topic_from_row(
+                    row,
+                    self._question_count(connection, organization_id, UUID(row["id"])),
+                    row["id"] in with_theory,
+                )
                 for row in rows
             ]
+
+    def get_theory(self, organization_id: UUID, topic_id: UUID) -> TheoryDocument | None:
+        """Theory of one topic, or None when the topic exists but has no theory yet."""
+
+        with self.database.connect() as connection:
+            self._require_topic(connection, organization_id, topic_id)
+            row = connection.execute(
+                "SELECT content_json FROM concursos_theory WHERE organization_id = ? AND topic_id = ?",
+                (str(organization_id), str(topic_id)),
+            ).fetchone()
+        return None if row is None else TheoryDocument.model_validate_json(row["content_json"])
+
+    def save_theory(
+        self,
+        organization_id: UUID,
+        topic_id: UUID,
+        document: TheoryDocument,
+        audit_context: AuditContext | None = None,
+    ) -> TheoryImportResult:
+        """Replace the whole theory of a topic, so re-importing a new edition is idempotent."""
+
+        now = self._now()
+        with self.database.connect() as connection:
+            self._require_topic(connection, organization_id, topic_id)
+            connection.execute(
+                """INSERT INTO concursos_theory (organization_id, topic_id, content_json, updated_at)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT (organization_id, topic_id)
+                DO UPDATE SET content_json = excluded.content_json, updated_at = excluded.updated_at""",
+                (str(organization_id), str(topic_id), document.model_dump_json(), now.isoformat()),
+            )
+            self._audit(
+                connection, organization_id, "theory.imported", "concursos_topic", topic_id,
+                {"chapters": len(document.chapters)}, audit_context,
+            )
+        return TheoryImportResult(topic_id=topic_id, chapters=len(document.chapters), updated_at=now)
+
+    @staticmethod
+    def _require_topic(connection: sqlite3.Connection, organization_id: UUID, topic_id: UUID) -> None:
+        topic = connection.execute(
+            "SELECT id FROM concursos_topics WHERE id = ? AND organization_id = ?",
+            (str(topic_id), str(organization_id)),
+        ).fetchone()
+        if topic is None:
+            raise TopicNotFoundError
 
     def create_topic(self, organization_id: UUID, data: TopicCreate, audit_context: AuditContext | None = None) -> Topic:
         topic_id = uuid4()
@@ -234,6 +299,10 @@ class SQLiteConcursosRepository:
                 raise TopicNotFoundError
             connection.execute(
                 "DELETE FROM concursos_questions WHERE topic_id = ? AND organization_id = ?",
+                (str(topic_id), str(organization_id)),
+            )
+            connection.execute(
+                "DELETE FROM concursos_theory WHERE topic_id = ? AND organization_id = ?",
                 (str(topic_id), str(organization_id)),
             )
             connection.execute(

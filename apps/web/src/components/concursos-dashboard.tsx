@@ -93,7 +93,7 @@ export function ConcursosDashboard() {
         )}
       </section>
 
-      <div role="tablist" aria-label="Áreas do VIRA Concursos" className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+      <div role="tablist" aria-label="Áreas do VIRA Concursos" className="grid max-w-md grid-cols-2 gap-2">
         {tabs.map((item) => (
           <button
             key={item.id}
@@ -103,7 +103,7 @@ export function ConcursosDashboard() {
             aria-selected={tab === item.id}
             aria-controls={`concursos-panel-${item.id}`}
             onClick={() => openTab(item.id)}
-            className={`${tab === item.id ? tabTone.active : tabTone.idle} sm:px-5`}
+            className={tab === item.id ? tabTone.active : tabTone.idle}
           >
             {item.label}
           </button>
@@ -117,7 +117,7 @@ export function ConcursosDashboard() {
           aria-labelledby="concursos-tab-conteudo"
           className="space-y-4 sm:space-y-6"
         >
-          <div role="tablist" aria-label="Conteúdo" className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <div role="tablist" aria-label="Conteúdo" className="grid max-w-md grid-cols-2 gap-2">
             {contentViews.map((item) => (
               <button
                 key={item.id}
@@ -127,7 +127,7 @@ export function ConcursosDashboard() {
                 aria-selected={contentView === item.id}
                 aria-controls={`concursos-view-panel-${item.id}`}
                 onClick={() => openContentView(item.id)}
-                className={`${contentView === item.id ? tabTone.active : tabTone.idle} sm:px-6`}
+                className={contentView === item.id ? tabTone.active : tabTone.idle}
               >
                 {item.label}
               </button>

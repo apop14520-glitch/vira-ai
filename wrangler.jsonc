@@ -6,7 +6,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "vars": {
-    "API_INTERNAL_URL": "https://vira-api-production.up.railway.app"
+    "API_INTERNAL_URL": "https://137-131-255-128.nip.io"
   },
   "assets": {
     "directory": "apps/web/.open-next/assets",

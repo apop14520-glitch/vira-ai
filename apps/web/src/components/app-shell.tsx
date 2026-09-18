@@ -40,8 +40,8 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
   return (
     <AuthGate>
       <div className="min-h-screen bg-slate-950">
-        <header className="sticky top-0 z-20 border-b border-slate-800/80 bg-slate-950/85 px-4 py-3 backdrop-blur-xl sm:px-6 lg:px-8 lg:py-3.5">
-          <div className="mx-auto flex max-w-[1440px] items-center gap-3">
+        <header className="sticky top-0 z-20 border-b border-slate-800/80 bg-slate-950/85 py-3 backdrop-blur-xl lg:py-3.5">
+          <div className="mx-auto flex max-w-[1440px] items-center gap-3 px-4 sm:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-3">
               <button type="button" aria-expanded={mobileMenuOpen} aria-controls="vira-mobile-menu" aria-label={mobileMenuOpen ? "Fechar menu" : "Abrir menu"} onClick={() => setMobileMenuOpen((current) => !current)} className="flex h-10 w-10 shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white text-slate-900 transition hover:border-cyan-400/60 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:text-cyan-200 lg:hidden">
                 <span className={`h-0.5 w-4 rounded-full bg-current transition ${mobileMenuOpen ? "translate-y-2 rotate-45" : ""}`} />
@@ -116,7 +116,7 @@ function LogoutButton() {
 function NavItem({ href, label, symbol, active, compact = false }: { href: string; label: string; symbol: string; active: boolean; compact?: boolean }) {
   return (
     <Link href={href} aria-current={active ? "page" : undefined} className={`nav-item group flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold tracking-[-0.01em] transition ${compact ? "px-2.5 py-2" : "px-3 py-3"} ${active ? "bg-cyan-100 font-bold text-cyan-950 dark:bg-cyan-400/15 dark:text-cyan-100" : "text-slate-700 hover:bg-slate-950 hover:text-white dark:text-slate-300 dark:hover:bg-cyan-400 dark:hover:text-slate-950"}`}>
-      <span className={`flex h-7 w-7 items-center justify-center rounded-lg text-sm font-semibold transition ${active ? "bg-cyan-300 text-slate-950" : "bg-white text-cyan-700 group-hover:bg-cyan-300 group-hover:text-slate-950 dark:bg-slate-800 dark:text-cyan-300 dark:group-hover:bg-slate-950 dark:group-hover:text-cyan-300"}`}>{symbol}</span>
+      <span className={`flex h-7 w-7 items-center justify-center rounded-lg text-sm font-semibold leading-none transition ${active ? "bg-cyan-300 text-slate-950" : "bg-white text-cyan-700 group-hover:bg-cyan-300 group-hover:text-slate-950 dark:bg-slate-800 dark:text-cyan-300 dark:group-hover:bg-slate-950 dark:group-hover:text-cyan-300"}`}>{symbol}</span>
       <span>{label}</span>
     </Link>
   );

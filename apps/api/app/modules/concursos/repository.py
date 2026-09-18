@@ -19,6 +19,10 @@ from app.modules.concursos.domain import (
 )
 
 
+class TopicAlreadyExistsError(Exception):
+    """Raised when a topic name already exists for the tenant."""
+
+
 class TopicNotFoundError(Exception):
     """Raised when a requested topic is absent from the tenant scope."""
 
@@ -214,14 +218,17 @@ class SQLiteConcursosRepository:
     def create_topic(self, organization_id: UUID, data: TopicCreate, audit_context: AuditContext | None = None) -> Topic:
         topic_id = uuid4()
         now = self._now()
-        with self.database.connect() as connection:
-            connection.execute(
-                """INSERT INTO concursos_topics (id, organization_id, name, normalized_name, description, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)""",
-                (str(topic_id), str(organization_id), data.name, self._normalized(data.name), data.description, now.isoformat()),
-            )
-            self._audit(connection, organization_id, "topic.created", "concursos_topic", topic_id, {"name": data.name}, audit_context)
-            row = connection.execute("SELECT * FROM concursos_topics WHERE id = ?", (str(topic_id),)).fetchone()
+        try:
+            with self.database.connect() as connection:
+                connection.execute(
+                    """INSERT INTO concursos_topics (id, organization_id, name, normalized_name, description, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?)""",
+                    (str(topic_id), str(organization_id), data.name, self._normalized(data.name), data.description, now.isoformat()),
+                )
+                self._audit(connection, organization_id, "topic.created", "concursos_topic", topic_id, {"name": data.name}, audit_context)
+                row = connection.execute("SELECT * FROM concursos_topics WHERE id = ?", (str(topic_id),)).fetchone()
+        except sqlite3.IntegrityError as error:
+            raise TopicAlreadyExistsError from error
         return self._topic_from_row(row, 0)
 
     def delete_topic(self, organization_id: UUID, topic_id: UUID, audit_context: AuditContext | None = None) -> None:

@@ -21,6 +21,7 @@ from app.modules.concursos.repository import (
     AuditContext,
     QuestionNotFoundError,
     SQLiteConcursosRepository,
+    TopicAlreadyExistsError,
     TopicNotFoundError,
 )
 from app.security.auth import Principal, get_admin_principal, get_current_principal
@@ -48,7 +49,10 @@ def list_topics(request: Request, principal: Principal = Depends(get_current_pri
 
 @router.post("/topics", response_model=Topic, status_code=status.HTTP_201_CREATED)
 def create_topic(request: Request, payload: TopicCreate, principal: Principal = Depends(get_admin_principal)) -> Topic:
-    return repository(request).create_topic(principal.organization_id, payload, audit_context(request, principal))
+    try:
+        return repository(request).create_topic(principal.organization_id, payload, audit_context(request, principal))
+    except TopicAlreadyExistsError as error:
+        raise HTTPException(status_code=409, detail="Já existe um tópico com esse nome.") from error
 
 
 @router.delete("/topics/{topic_id}", status_code=status.HTTP_204_NO_CONTENT)

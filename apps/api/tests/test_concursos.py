@@ -148,3 +148,12 @@ def test_question_requires_an_existing_topic() -> None:
             },
         )
         assert response.status_code == 404
+
+
+def test_duplicate_topic_name_is_rejected() -> None:
+    suffix = uuid4().hex[:8]
+    payload = {"name": f"Tópico Duplicado {suffix}"}
+    with TestClient(app) as client:
+        assert client.post("/api/v1/concursos/topics", json=payload).status_code == 201
+        duplicated = client.post("/api/v1/concursos/topics", json=payload)
+        assert duplicated.status_code == 409

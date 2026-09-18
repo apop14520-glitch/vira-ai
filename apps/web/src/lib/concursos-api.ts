@@ -63,7 +63,15 @@ export type QuizAnswerResult = {
   explanation: string;
 };
 
-export type QuizResult = { topic_id: string; total: number; correct: number; results: QuizAnswerResult[] };
+export type ExamAnswerResult = {
+  question_id: string;
+  selected_option: QuestionOption | null;
+  correct_option: QuestionOption;
+  is_correct: boolean;
+  explanation: string;
+};
+
+export type ExamResult = { total: number; correct: number; blank: number; results: ExamAnswerResult[] };
 
 export type ConcursosSummary = { total_topics: number; total_questions: number; by_topic: Record<string, number> };
 
@@ -93,10 +101,21 @@ export const concursosApi = {
   createQuestion: (input: QuestionInput) =>
     request<Question>("/questions", { method: "POST", body: JSON.stringify(input) }),
   deleteQuestion: (questionId: string) => request<void>(`/questions/${questionId}`, { method: "DELETE" }),
-  startQuiz: (topicId: string, quantity = 10) =>
-    request<QuestionPublic[]>("/quiz/start", { method: "POST", body: JSON.stringify({ topic_id: topicId, quantity }) }),
-  submitQuiz: (topicId: string, answers: { question_id: string; selected_option: QuestionOption }[]) =>
-    request<QuizResult>("/quiz/submit", { method: "POST", body: JSON.stringify({ topic_id: topicId, answers }) }),
+  drawQuestions: (topicIds: string[], quantity: number) =>
+    request<QuestionPublic[]>("/questions/draw", {
+      method: "POST",
+      body: JSON.stringify({ topic_ids: topicIds, quantity }),
+    }),
+  checkAnswer: (questionId: string, selectedOption: QuestionOption) =>
+    request<QuizAnswerResult>("/questions/check", {
+      method: "POST",
+      body: JSON.stringify({ question_id: questionId, selected_option: selectedOption }),
+    }),
+  submitExam: (answers: { question_id: string; selected_option: QuestionOption }[], blankQuestionIds: string[]) =>
+    request<ExamResult>("/exams/submit", {
+      method: "POST",
+      body: JSON.stringify({ answers, blank_question_ids: blankQuestionIds }),
+    }),
   summary: () => request<ConcursosSummary>("/summary"),
   auditEvents: (limit = 50) => request<AuditEvent[]>(`/audit?limit=${limit}`),
 };

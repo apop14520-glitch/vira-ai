@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
+import { ExamMode } from "@/components/concursos-exam";
+import { StudySession } from "@/components/concursos-study";
 import {
   AuditEvent,
   concursosApi,
@@ -9,10 +11,16 @@ import {
   Question,
   QuestionDifficulty,
   QuestionOption,
-  QuestionPublic,
-  QuizResult,
   Topic,
 } from "@/lib/concursos-api";
+
+type Tab = "questoes" | "estudo" | "simulados";
+
+const tabs: { id: Tab; label: string }[] = [
+  { id: "questoes", label: "Questões" },
+  { id: "estudo", label: "Sessão de estudo" },
+  { id: "simulados", label: "Simulados" },
+];
 
 const difficultyLabels: Record<QuestionDifficulty, string> = {
   facil: "Fácil",
@@ -45,17 +53,14 @@ export function ConcursosDashboard() {
   const [topicName, setTopicName] = useState("");
   const [topicDescription, setTopicDescription] = useState("");
   const [questionForm, setQuestionForm] = useState(createInitialQuestionForm(""));
-  const [quizQuestions, setQuizQuestions] = useState<QuestionPublic[]>([]);
-  const [quizAnswers, setQuizAnswers] = useState<Record<string, QuestionOption>>({});
-  const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
-  const [quizLoading, setQuizLoading] = useState(false);
+  const [tab, setTab] = useState<Tab>("questoes");
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [auditVisible, setAuditVisible] = useState(false);
   const [auditLoading, setAuditLoading] = useState(false);
 
   const reload = async () => {
     const [nextTopics, nextSummary] = await Promise.all([concursosApi.listTopics(), concursosApi.summary()]);
-    setTopics(nextTopics);
+    setTopics([...nextTopics].sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { numeric: true })));
     setSummary(nextSummary);
   };
 
@@ -75,9 +80,6 @@ export function ConcursosDashboard() {
       .then(setQuestions)
       .catch((error: Error) => setMessage(error.message));
     setQuestionForm(createInitialQuestionForm(selectedTopicId));
-    setQuizQuestions([]);
-    setQuizResult(null);
-    setQuizAnswers({});
   }, [selectedTopicId]);
 
   const handleCreateTopic = async (event: FormEvent) => {
@@ -125,35 +127,6 @@ export function ConcursosDashboard() {
     }
   };
 
-  const startQuiz = async () => {
-    if (!selectedTopicId) return;
-    setQuizLoading(true);
-    setQuizResult(null);
-    setQuizAnswers({});
-    try {
-      const started = await concursosApi.startQuiz(selectedTopicId, 10);
-      setQuizQuestions(started);
-    } catch (error) {
-      setMessage((error as Error).message);
-    } finally {
-      setQuizLoading(false);
-    }
-  };
-
-  const submitQuiz = async () => {
-    if (!selectedTopicId) return;
-    const answers = quizQuestions
-      .filter((question) => quizAnswers[question.id])
-      .map((question) => ({ question_id: question.id, selected_option: quizAnswers[question.id] }));
-    if (answers.length === 0) return;
-    try {
-      const result = await concursosApi.submitQuiz(selectedTopicId, answers);
-      setQuizResult(result);
-    } catch (error) {
-      setMessage((error as Error).message);
-    }
-  };
-
   const toggleAuditLog = async () => {
     const next = !auditVisible;
     setAuditVisible(next);
@@ -177,9 +150,9 @@ export function ConcursosDashboard() {
     <div className="space-y-6 sm:space-y-8">
       <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-amber-950/10 sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">VIRA Concursos</p>
-        <h1 className="mt-2 text-2xl font-black text-white sm:text-3xl">Banco de questões e simulados</h1>
+        <h1 className="mt-2 text-2xl font-black text-white sm:text-3xl">Questões, estudo e simulados</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-          Cadastre tópicos e questões a partir do seu material de estudo e treine em modo simulado.
+          Mantenha o banco de questões, estude com feedback imediato e faça simulados cronometrados.
         </p>
         {summary && (
           <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-300">
@@ -195,6 +168,41 @@ export function ConcursosDashboard() {
         )}
       </section>
 
+      <div role="tablist" aria-label="Áreas do VIRA Concursos" className="flex flex-wrap gap-2">
+        {tabs.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            id={`concursos-tab-${item.id}`}
+            aria-selected={tab === item.id}
+            aria-controls={`concursos-panel-${item.id}`}
+            onClick={() => setTab(item.id)}
+            className={`rounded-lg border px-4 py-2 text-sm font-bold ${
+              tab === item.id
+                ? "border-amber-400/60 bg-amber-400/10 text-amber-200"
+                : "border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700"
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "estudo" && (
+        <div role="tabpanel" id="concursos-panel-estudo" aria-labelledby="concursos-tab-estudo">
+          <StudySession topics={topics} />
+        </div>
+      )}
+
+      {tab === "simulados" && (
+        <div role="tabpanel" id="concursos-panel-simulados" aria-labelledby="concursos-tab-simulados">
+          <ExamMode topics={topics} />
+        </div>
+      )}
+
+      {tab === "questoes" && (
+      <div role="tabpanel" id="concursos-panel-questoes" aria-labelledby="concursos-tab-questoes" className="space-y-6 sm:space-y-8">
       <section className="grid gap-4 lg:grid-cols-[280px_1fr]">
         <div className="space-y-4">
           <form onSubmit={handleCreateTopic} className="space-y-2 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
@@ -251,7 +259,7 @@ export function ConcursosDashboard() {
         <div className="space-y-4">
           {!selectedTopicId && (
             <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 text-sm text-slate-400">
-              Selecione ou crie um tópico para cadastrar questões e iniciar um simulado.
+              Selecione ou crie um tópico para ver e cadastrar questões.
             </div>
           )}
 
@@ -323,16 +331,7 @@ export function ConcursosDashboard() {
               </form>
 
               <div className="space-y-2 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-bold text-white">Questões cadastradas ({questions.length})</h2>
-                  <button
-                    onClick={startQuiz}
-                    disabled={questions.length === 0 || quizLoading}
-                    className="rounded-lg border border-amber-400/60 px-3 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-400/10 disabled:opacity-40"
-                  >
-                    Iniciar simulado
-                  </button>
-                </div>
+                <h2 className="text-sm font-bold text-white">Questões cadastradas ({questions.length})</h2>
                 <ul className="space-y-2">
                   {questions.map((question) => (
                     <li key={question.id} className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 text-sm text-slate-300">
@@ -349,53 +348,6 @@ export function ConcursosDashboard() {
                   ))}
                 </ul>
               </div>
-
-              {quizQuestions.length > 0 && (
-                <div className="space-y-3 rounded-2xl border border-amber-400/30 bg-amber-400/5 p-4">
-                  <h2 className="text-sm font-bold text-white">Simulado ({quizQuestions.length} questões)</h2>
-                  {quizQuestions.map((question, index) => (
-                    <div key={question.id} className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                      <p className="text-sm text-slate-200">{index + 1}. {question.statement}</p>
-                      <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
-                        {(["a", "b", "c", "d", "e"] as const)
-                          .filter((letter) => letter !== "e" || question.option_e)
-                          .map((letter) => (
-                          <label key={letter} className="flex items-center gap-2 text-sm text-slate-300">
-                            <input
-                              type="radio"
-                              name={`quiz-${question.id}`}
-                              checked={quizAnswers[question.id] === letter}
-                              onChange={() => setQuizAnswers({ ...quizAnswers, [question.id]: letter })}
-                            />
-                            {question[`option_${letter}`]}
-                          </label>
-                        ))}
-                      </div>
-                      {quizResult && (
-                        <p className={`mt-2 text-xs ${
-                          quizResult.results.find((result) => result.question_id === question.id)?.is_correct
-                            ? "text-emerald-400"
-                            : "text-red-400"
-                        }`}>
-                          Gabarito: {quizResult.results.find((result) => result.question_id === question.id)?.correct_option.toUpperCase()}
-                          {" "}
-                          {quizResult.results.find((result) => result.question_id === question.id)?.explanation}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                  {!quizResult && (
-                    <button onClick={submitQuiz} className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-bold text-slate-950 hover:bg-amber-300">
-                      Corrigir simulado
-                    </button>
-                  )}
-                  {quizResult && (
-                    <p className="text-sm font-bold text-white">
-                      Resultado: {quizResult.correct} de {quizResult.total} corretas
-                    </p>
-                  )}
-                </div>
-              )}
             </>
           )}
         </div>
@@ -420,6 +372,8 @@ export function ConcursosDashboard() {
           </div>
         )}
       </section>
+      </div>
+      )}
     </div>
   );
 }

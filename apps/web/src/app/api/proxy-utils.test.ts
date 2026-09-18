@@ -16,6 +16,11 @@ describe("contrato do proxy Cloudflare", () => {
     expect(resolveUpstreamPath(["v1", "admin", "secrets"])).toBeNull();
   });
 
+  it("encaminha as rotas do módulo Concursos", () => {
+    expect(resolveUpstreamPath(["v1", "concursos", "topics"])).toBe("/api/v1/concursos/topics");
+    expect(resolveUpstreamPath(["v1", "concursos", "quiz", "start"])).toBe("/api/v1/concursos/quiz/start");
+  });
+
   it("aceita a origem HTTPS sem acrescentar caminhos", () => {
     expect(resolveApiOrigin("https://vira-api-production.up.railway.app", "production").toString()).toBe(
       "https://vira-api-production.up.railway.app/",

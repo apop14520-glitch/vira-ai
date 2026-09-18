@@ -17,6 +17,9 @@ export function resolveUpstreamPath(path: readonly string[]): string | null {
   if (requestedPath === "/v1/business" || requestedPath.startsWith("/v1/business/")) {
     return `/api${requestedPath}`;
   }
+  if (requestedPath === "/v1/concursos" || requestedPath.startsWith("/v1/concursos/")) {
+    return `/api${requestedPath}`;
+  }
 
   return null;
 }

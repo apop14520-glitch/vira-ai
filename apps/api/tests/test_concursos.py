@@ -94,6 +94,45 @@ def test_quiz_can_be_started_and_graded() -> None:
         assert summary.json()["total_questions"] >= 1
 
 
+def test_question_supports_an_optional_fifth_option() -> None:
+    suffix = uuid4().hex[:8]
+    with TestClient(app) as client:
+        topic_id = client.post(
+            "/api/v1/concursos/topics", json={"name": f"Direito {suffix}"}
+        ).json()["id"]
+
+        with_five = client.post(
+            "/api/v1/concursos/questions",
+            json={
+                "topic_id": topic_id,
+                "statement": "Qual alternativa está correta sobre o tema?",
+                "option_a": "A",
+                "option_b": "B",
+                "option_c": "C",
+                "option_d": "D",
+                "option_e": "E",
+                "correct_option": "e",
+            },
+        )
+        assert with_five.status_code == 201
+        assert with_five.json()["option_e"] == "E"
+
+        without_five = client.post(
+            "/api/v1/concursos/questions",
+            json={
+                "topic_id": topic_id,
+                "statement": "Outra pergunta sem quinta alternativa cadastrada.",
+                "option_a": "A",
+                "option_b": "B",
+                "option_c": "C",
+                "option_d": "D",
+                "correct_option": "b",
+            },
+        )
+        assert without_five.status_code == 201
+        assert without_five.json()["option_e"] is None
+
+
 def test_question_requires_an_existing_topic() -> None:
     with TestClient(app) as client:
         response = client.post(

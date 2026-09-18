@@ -18,6 +18,7 @@ class QuestionOption(StrEnum):
     B = "b"
     C = "c"
     D = "d"
+    E = "e"
 
 
 class TopicCreate(BaseModel):
@@ -50,7 +51,7 @@ class Topic(BaseModel):
 
 
 class QuestionCreate(BaseModel):
-    """A multiple-choice question with exactly four options."""
+    """A multiple-choice question with four required options and an optional fifth (E)."""
 
     topic_id: UUID
     statement: str = Field(min_length=5, max_length=4000)
@@ -58,6 +59,7 @@ class QuestionCreate(BaseModel):
     option_b: str = Field(min_length=1, max_length=500)
     option_c: str = Field(min_length=1, max_length=500)
     option_d: str = Field(min_length=1, max_length=500)
+    option_e: str | None = Field(default=None, max_length=500)
     correct_option: QuestionOption
     explanation: str = Field(default="", max_length=2000)
     difficulty: QuestionDifficulty = QuestionDifficulty.MEDIA
@@ -88,6 +90,7 @@ class Question(BaseModel):
     option_b: str
     option_c: str
     option_d: str
+    option_e: str | None
     correct_option: QuestionOption
     explanation: str
     difficulty: QuestionDifficulty
@@ -105,6 +108,7 @@ class QuestionPublic(BaseModel):
     option_b: str
     option_c: str
     option_d: str
+    option_e: str | None
     difficulty: QuestionDifficulty
 
 

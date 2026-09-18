@@ -28,6 +28,7 @@ function createInitialQuestionForm(topicId: string) {
     option_b: "",
     option_c: "",
     option_d: "",
+    option_e: "",
     correct_option: "a" as QuestionOption,
     explanation: "",
     difficulty: "media" as QuestionDifficulty,
@@ -105,7 +106,7 @@ export function ConcursosDashboard() {
   const handleCreateQuestion = async (event: FormEvent) => {
     event.preventDefault();
     try {
-      await concursosApi.createQuestion(questionForm);
+      await concursosApi.createQuestion({ ...questionForm, option_e: questionForm.option_e.trim() || null });
       setQuestionForm(createInitialQuestionForm(selectedTopicId));
       const [refreshedQuestions] = await Promise.all([concursosApi.listQuestions(selectedTopicId), reload()]);
       setQuestions(refreshedQuestions);
@@ -276,6 +277,12 @@ export function ConcursosDashboard() {
                       className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white"
                     />
                   ))}
+                  <input
+                    value={questionForm.option_e}
+                    onChange={(event) => setQuestionForm({ ...questionForm, option_e: event.target.value })}
+                    placeholder="Alternativa E (opcional)"
+                    className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white"
+                  />
                 </div>
                 <div className="flex flex-wrap gap-3">
                   <label className="text-sm text-slate-300">
@@ -288,6 +295,7 @@ export function ConcursosDashboard() {
                       {(["a", "b", "c", "d"] as const).map((letter) => (
                         <option key={letter} value={letter}>{letter.toUpperCase()}</option>
                       ))}
+                      {questionForm.option_e.trim() && <option value="e">E</option>}
                     </select>
                   </label>
                   <label className="text-sm text-slate-300">
@@ -349,7 +357,9 @@ export function ConcursosDashboard() {
                     <div key={question.id} className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
                       <p className="text-sm text-slate-200">{index + 1}. {question.statement}</p>
                       <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
-                        {(["a", "b", "c", "d"] as const).map((letter) => (
+                        {(["a", "b", "c", "d", "e"] as const)
+                          .filter((letter) => letter !== "e" || question.option_e)
+                          .map((letter) => (
                           <label key={letter} className="flex items-center gap-2 text-sm text-slate-300">
                             <input
                               type="radio"

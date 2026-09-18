@@ -1,5 +1,5 @@
 export type QuestionDifficulty = "facil" | "media" | "dificil";
-export type QuestionOption = "a" | "b" | "c" | "d";
+export type QuestionOption = "a" | "b" | "c" | "d" | "e";
 
 export type Topic = {
   id: string;
@@ -21,6 +21,7 @@ export type Question = {
   option_b: string;
   option_c: string;
   option_d: string;
+  option_e: string | null;
   correct_option: QuestionOption;
   explanation: string;
   difficulty: QuestionDifficulty;
@@ -35,6 +36,7 @@ export type QuestionInput = {
   option_b: string;
   option_c: string;
   option_d: string;
+  option_e?: string | null;
   correct_option: QuestionOption;
   explanation?: string;
   difficulty?: QuestionDifficulty;
@@ -49,6 +51,7 @@ export type QuestionPublic = {
   option_b: string;
   option_c: string;
   option_d: string;
+  option_e: string | null;
   difficulty: QuestionDifficulty;
 };
 

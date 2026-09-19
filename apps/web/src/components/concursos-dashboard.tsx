@@ -60,6 +60,33 @@ export function ConcursosDashboard() {
     setTab("conteudo");
   };
 
+  const menu = (
+    <div className="divide-y divide-slate-200 dark:divide-slate-800">
+      <ChoiceGroup
+        bare
+        title="Área"
+        value={tab}
+        onChange={(next) => openTab(next as Tab)}
+        options={[
+          { id: "conteudo", label: "Conteúdo" },
+          { id: "estudo", label: "Sessão de estudo" },
+        ]}
+      />
+      {tab === "conteudo" && (
+        <ChoiceGroup
+          bare
+          title="Conteúdo"
+          value={contentView}
+          onChange={(next) => openContentView(next as ContentView)}
+          options={[
+            { id: "teoria", label: "Teoria", count: theoryCount },
+            { id: "questoes", label: "Questões", count: bankTopics.reduce((sum, topic) => sum + topic.question_count, 0) },
+          ]}
+        />
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-6 sm:space-y-8">
       <section className={ui.cardAccent}>
@@ -84,51 +111,16 @@ export function ConcursosDashboard() {
         )}
       </section>
 
-      <div className={`grid gap-4 ${tab === "conteudo" ? "sm:grid-cols-2" : ""} max-w-2xl`}>
-        <ChoiceGroup
-          title="Área"
-          value={tab}
-          onChange={(next) => openTab(next as Tab)}
-          options={[
-            { id: "conteudo", label: "Conteúdo" },
-            { id: "estudo", label: "Sessão de estudo" },
-          ]}
-        />
-        {tab === "conteudo" && (
-          <ChoiceGroup
-            title="Conteúdo"
-            value={contentView}
-            onChange={(next) => openContentView(next as ContentView)}
-            options={[
-              { id: "teoria", label: "Teoria", count: theoryCount },
-              { id: "questoes", label: "Questões", count: bankTopics.reduce((sum, topic) => sum + topic.question_count, 0) },
-            ]}
-          />
-        )}
-      </div>
+      {tab === "conteudo" && contentView === "teoria" && (
+        <ConcursosTheory menu={menu} topics={topics} initialTopicId={theoryTopicId} onPractice={practiceTopic} />
+      )}
 
-      {tab === "conteudo" && (
-        <div
-          className="space-y-4 sm:space-y-6"
-        >
-          {contentView === "teoria" && (
-            <div>
-              <ConcursosTheory topics={topics} initialTopicId={theoryTopicId} onPractice={practiceTopic} />
-            </div>
-          )}
-
-          {contentView === "questoes" && (
-            <div>
-              <ConcursosQuestionBank topics={bankTopics} onError={setMessage} />
-            </div>
-          )}
-        </div>
+      {tab === "conteudo" && contentView === "questoes" && (
+        <ConcursosQuestionBank menu={menu} topics={bankTopics} onError={setMessage} />
       )}
 
       {tab === "estudo" && (
-        <div>
-          <PracticeHub topics={topics} initialTopicIds={studyTopicIds} onOpenTheory={readTheory} />
-        </div>
+        <PracticeHub menu={menu} topics={topics} initialTopicIds={studyTopicIds} onOpenTheory={readTheory} />
       )}
     </div>
   );

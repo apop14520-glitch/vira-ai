@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 
 import { ExamRunner } from "@/components/concursos-exam";
 import { isExamTopic, useScrollIntoViewOnChange } from "@/components/concursos-shared";
@@ -28,10 +28,12 @@ type PracticeProps = {
   /** Assuntos já marcados ao abrir (por exemplo, vindos do botão "Praticar" da teoria). */
   initialTopicIds?: string[];
   onOpenTheory?: (topicId: string) => void;
+  /** Menu de navegação do Concursos, mostrado ao lado da configuração. */
+  menu?: ReactNode;
 };
 
 /** Sessão de estudo e simulados numa tela só: escolhe os assuntos uma vez e depois o modo de resolver. */
-export function PracticeHub({ topics, initialTopicIds = [], onOpenTheory }: PracticeProps) {
+export function PracticeHub({ topics, initialTopicIds = [], onOpenTheory, menu }: PracticeProps) {
   const [mode, setMode] = useState<Mode>("estudo");
   const [topicIds, setTopicIds] = useState<string[]>(initialTopicIds);
   const [quantity, setQuantity] = useState(10);
@@ -88,7 +90,7 @@ export function PracticeHub({ topics, initialTopicIds = [], onOpenTheory }: Prac
   } else if (run?.mode === "simulado") {
     content = <ExamRunner key={run.id} questions={run.questions} minutes={run.minutes} onExit={() => setRun(null)} />;
   } else {
-    content = (
+    const setup = (
       <section className={`${ui.card} space-y-6`}>
         <div>
           <h2 className={ui.title}>Sessão de estudo</h2>
@@ -177,6 +179,14 @@ export function PracticeHub({ topics, initialTopicIds = [], onOpenTheory }: Prac
           {mode === "simulado" ? "Iniciar simulado" : "Começar sessão"}
         </button>
       </section>
+    );
+    content = menu ? (
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <div className={`${ui.card} lg:sticky lg:top-24`}>{menu}</div>
+        {setup}
+      </div>
+    ) : (
+      setup
     );
   }
 

@@ -123,15 +123,17 @@ type ChoiceGroupProps = {
   value: string;
   onChange: (id: string) => void;
   defaultOpen?: boolean;
+  /** Sem moldura própria, para ficar dentro de outra caixa. */
+  bare?: boolean;
 };
 
 /** Menu de escolha única com caixas de marcação: sempre há uma opção marcada e marcar outra troca a escolha. */
-export function ChoiceGroup({ title, options, value, onChange, defaultOpen = true }: ChoiceGroupProps) {
+export function ChoiceGroup({ title, options, value, onChange, defaultOpen = true, bare = false }: ChoiceGroupProps) {
   const [open, setOpen] = useState(defaultOpen);
   const bodyId = useId();
 
   return (
-    <section className={tone.card}>
+    <section className={bare ? "py-3 first:pt-0 last:pb-0" : tone.card}>
       <button type="button" aria-expanded={open} aria-controls={bodyId} onClick={() => setOpen((current) => !current)} className={tone.header}>
         <span className={tone.title}>{title}</span>
         <Chevron open={open} />

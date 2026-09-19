@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 
 import { FilterGroup } from "@/components/concursos-filter";
 import { filter as filterTone, ui } from "@/components/concursos-ui";
@@ -18,6 +18,8 @@ type ConcursosQuestionBankProps = {
   /** Assuntos que têm questões, já em ordem. */
   topics: Topic[];
   onError: (message: string) => void;
+  /** Menu de navegação do Concursos, mostrado no topo da coluna de filtros. */
+  menu?: ReactNode;
 };
 
 function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
@@ -81,7 +83,7 @@ function AuditLog({ onError }: { onError: (message: string) => void }) {
   );
 }
 
-export function ConcursosQuestionBank({ topics, onError }: ConcursosQuestionBankProps) {
+export function ConcursosQuestionBank({ topics, onError, menu }: ConcursosQuestionBankProps) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [topicIds, setTopicIds] = useState<string[]>([]);
@@ -137,16 +139,10 @@ export function ConcursosQuestionBank({ topics, onError }: ConcursosQuestionBank
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      <section className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <section className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="space-y-3 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-1">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className={ui.heading}>Filtrar questões</h2>
-            {hasFilters && (
-              <button type="button" onClick={clear} className={ui.linkButton}>
-                Limpar filtros
-              </button>
-            )}
-          </div>
+          {menu && <div className={ui.card}>{menu}</div>}
+          <h2 className="sr-only">Filtrar questões</h2>
           <FilterGroup
             title="Assuntos"
             searchPlaceholder="Buscar assunto"
@@ -165,36 +161,34 @@ export function ConcursosQuestionBank({ topics, onError }: ConcursosQuestionBank
         </div>
 
         <div className={`${ui.card} space-y-5`}>
-          <div className="space-y-3">
-            <div>
-              <h2 className={ui.title}>Banco de questões</h2>
-              <p className={ui.muted} aria-live="polite">
-                {loading ? "Carregando questões…" : `${total} ${total === 1 ? "questão" : "questões"}${hasFilters ? (total === 1 ? " encontrada" : " encontradas") : ""}`}
-              </p>
+          <h2 className="sr-only">Banco de questões</h2>
+          <p className={loading ? ui.muted : "sr-only"} aria-live="polite">
+            {loading ? "Carregando questões…" : `${total} ${total === 1 ? "questão" : "questões"}${hasFilters ? (total === 1 ? " encontrada" : " encontradas") : ""}`}
+          </p>
+          {hasFilters && (
+            <div className="flex flex-wrap items-center gap-2">
+              {topicIds.map((id) => (
+                <Chip key={id} label={topicName(id)} onRemove={() => setTopicIds(topicIds.filter((item) => item !== id))} />
+              ))}
+              {difficulties.map((id) => (
+                <Chip
+                  key={id}
+                  label={difficultyLabels[id as QuestionDifficulty]}
+                  onRemove={() => setDifficulties(difficulties.filter((item) => item !== id))}
+                />
+              ))}
+              <button type="button" onClick={clear} className={ui.linkButton}>
+                Limpar filtros
+              </button>
             </div>
-            {hasFilters && (
-              <div className="flex flex-wrap gap-2">
-                {topicIds.map((id) => (
-                  <Chip key={id} label={topicName(id)} onRemove={() => setTopicIds(topicIds.filter((item) => item !== id))} />
-                ))}
-                {difficulties.map((id) => (
-                  <Chip
-                    key={id}
-                    label={difficultyLabels[id as QuestionDifficulty]}
-                    onRemove={() => setDifficulties(difficulties.filter((item) => item !== id))}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          )}
 
           {!loading && total === 0 && <p className={ui.muted}>Nenhuma questão com esses filtros.</p>}
 
           {groups.map(({ topic, items }) => (
             <section key={topic.id} aria-labelledby={`bank-${topic.id}`} className="space-y-2">
-              <h3 id={`bank-${topic.id}`} className="flex items-baseline justify-between gap-3 text-sm font-black text-slate-950 dark:text-white">
-                <span className="min-w-0">{topic.name}</span>
-                <span className="shrink-0 text-xs font-bold text-slate-600 dark:text-slate-400">{items.length}</span>
+              <h3 id={`bank-${topic.id}`} className="text-sm font-black text-slate-950 dark:text-white">
+                {topic.name}
               </h3>
               <ol className="space-y-2">
                 {items.map((question, position) => (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 
 import { sortTopics, useScrollIntoViewOnChange } from "@/components/concursos-shared";
 import { theory as tone, topicRow, ui } from "@/components/concursos-ui";
@@ -11,6 +11,8 @@ type ConcursosTheoryProps = {
   topics: Topic[];
   initialTopicId?: string;
   onPractice: (topicId: string) => void;
+  /** Menu de navegação do Concursos, mostrado no topo da caixa de assuntos. */
+  menu?: ReactNode;
 };
 
 function Block({ block }: { block: TheoryBlock }) {
@@ -185,7 +187,7 @@ function Reader({ topic, document, onPractice }: { topic: Topic; document: Theor
   );
 }
 
-export function ConcursosTheory({ topics, initialTopicId = "", onPractice }: ConcursosTheoryProps) {
+export function ConcursosTheory({ topics, initialTopicId = "", onPractice, menu }: ConcursosTheoryProps) {
   const [topicId, setTopicId] = useState(initialTopicId);
   const [document, setDocument] = useState<Theory | null>(null);
   const [loading, setLoading] = useState(false);
@@ -222,6 +224,7 @@ export function ConcursosTheory({ topics, initialTopicId = "", onPractice }: Con
 
   const list = (
     <div className={`${ui.card} space-y-3 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto`}>
+      {menu && <div className="border-b border-slate-200 pb-3 dark:border-slate-800">{menu}</div>}
       <h2 className={ui.heading}>Assuntos</h2>
       {available.length === 0 && <p className={ui.muted}>Nenhum assunto com teoria importada ainda.</p>}
       <ul className="space-y-2">

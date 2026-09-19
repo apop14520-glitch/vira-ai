@@ -4,14 +4,12 @@ import { useEffect, useState } from "react";
 
 import { ChoiceGroup } from "@/components/concursos-filter";
 import { PracticeHub } from "@/components/concursos-practice";
-import { ConcursosQuestionBank } from "@/components/concursos-question-bank";
 import { sortTopics } from "@/components/concursos-shared";
 import { ConcursosTheory } from "@/components/concursos-theory";
 import { ui } from "@/components/concursos-ui";
 import { concursosApi, ConcursosSummary, Topic } from "@/lib/concursos-api";
 
 type Tab = "conteudo" | "estudo";
-type ContentView = "teoria" | "questoes";
 
 export function ConcursosDashboard() {
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -19,7 +17,6 @@ export function ConcursosDashboard() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("conteudo");
-  const [contentView, setContentView] = useState<ContentView>("teoria");
   const [studyTopicIds, setStudyTopicIds] = useState<string[]>([]);
   const [theoryTopicId, setTheoryTopicId] = useState("");
 
@@ -37,8 +34,8 @@ export function ConcursosDashboard() {
     return <div className={`${ui.card} ${ui.muted}`}>Carregando Concursos…</div>;
   }
 
-  // O banco de questões só lista assuntos com questões (a revisão estratégica, por exemplo, só tem teoria).
-  const bankTopics = topics.filter((topic) => topic.question_count > 0);
+  // A revisão estratégica, por exemplo, só tem teoria, então não conta como assunto com questões.
+  const questionTopics = topics.filter((topic) => topic.question_count > 0);
   const theoryCount = topics.filter((topic) => topic.has_theory).length;
 
   const openTab = (next: Tab) => {
@@ -46,45 +43,26 @@ export function ConcursosDashboard() {
     setTheoryTopicId("");
     setTab(next);
   };
-  const openContentView = (next: ContentView) => {
-    setTheoryTopicId("");
-    setContentView(next);
-  };
   const practiceTopic = (topicId: string) => {
     setStudyTopicIds([topicId]);
     setTab("estudo");
   };
   const readTheory = (topicId: string) => {
     setTheoryTopicId(topicId);
-    setContentView("teoria");
     setTab("conteudo");
   };
 
   const menu = (
-    <div className="divide-y divide-slate-200 dark:divide-slate-800">
-      <ChoiceGroup
-        bare
-        title="Área"
-        value={tab}
-        onChange={(next) => openTab(next as Tab)}
-        options={[
-          { id: "conteudo", label: "Conteúdo" },
-          { id: "estudo", label: "Sessão de estudo" },
-        ]}
-      />
-      {tab === "conteudo" && (
-        <ChoiceGroup
-          bare
-          title="Conteúdo"
-          value={contentView}
-          onChange={(next) => openContentView(next as ContentView)}
-          options={[
-            { id: "teoria", label: "Teoria", count: theoryCount },
-            { id: "questoes", label: "Questões", count: bankTopics.reduce((sum, topic) => sum + topic.question_count, 0) },
-          ]}
-        />
-      )}
-    </div>
+    <ChoiceGroup
+      bare
+      title="Área"
+      value={tab}
+      onChange={(next) => openTab(next as Tab)}
+      options={[
+        { id: "conteudo", label: "Conteúdo" },
+        { id: "estudo", label: "Sessão de estudo" },
+      ]}
+    />
   );
 
   return (
@@ -93,12 +71,11 @@ export function ConcursosDashboard() {
         <p className={ui.eyebrow}>VIRA Concursos</p>
         <h1 className={ui.pageTitle}>Teoria, questões e simulados</h1>
         <p className={`mt-2 max-w-2xl ${ui.muted} leading-6`}>
-          Leia a teoria de cada assunto, filtre o banco de questões e estude com feedback imediato ou em simulados
-          cronometrados.
+          Leia a teoria de cada assunto e estude com feedback imediato ou em simulados cronometrados.
         </p>
         {summary && (
           <div className="mt-4 flex flex-wrap gap-2">
-            <span className={ui.pill}>{bankTopics.length} tópicos</span>
+            <span className={ui.pill}>{questionTopics.length} tópicos</span>
             <span className={ui.pill}>{summary.total_questions} questões</span>
             {theoryCount > 0 && <span className={ui.pill}>{theoryCount} assuntos com teoria</span>}
           </div>
@@ -111,12 +88,8 @@ export function ConcursosDashboard() {
         )}
       </section>
 
-      {tab === "conteudo" && contentView === "teoria" && (
+      {tab === "conteudo" && (
         <ConcursosTheory menu={menu} topics={topics} initialTopicId={theoryTopicId} onPractice={practiceTopic} />
-      )}
-
-      {tab === "conteudo" && contentView === "questoes" && (
-        <ConcursosQuestionBank menu={menu} topics={bankTopics} onError={setMessage} />
       )}
 
       {tab === "estudo" && (

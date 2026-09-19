@@ -262,9 +262,10 @@ body {
 }
 
 .settings-panel--bounded {
-  height: min(760px, calc(100dvh - 4rem));
-  max-height: calc(100dvh - 4rem);
+  height: auto;
+  max-height: min(600px, calc(100dvh - var(--settings-top, 4.5rem) - 0.75rem));
   min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .settings-scroll {
@@ -300,12 +301,11 @@ body {
     position: fixed;
     top: calc(4rem + env(safe-area-inset-top));
     right: 0.5rem;
-    bottom: calc(0.75rem + env(safe-area-inset-bottom));
     left: 0.5rem;
     width: auto;
     max-width: none;
     height: auto;
-    max-height: none;
+    max-height: calc(100dvh - 4.75rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
   }
@@ -323,16 +323,7 @@ body {
     scrollbar-width: thin;
   }
 
-  .settings-nav-header,
-  .settings-nav-group-label {
-    display: none;
-  }
-
-  .settings-nav-group {
-    display: contents;
-  }
-
-  .settings-nav-group > button {
+  .settings-nav > button {
     width: auto;
     min-width: max-content;
     flex: 0 0 auto;

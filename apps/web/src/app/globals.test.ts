@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("layout responsivo do painel de configurações", () => {
-  it("transforma o menu suspenso em um painel rolável de tela cheia no celular", () => {
+  it("mantém o painel de configurações compacto e rolável, sem altura fixa, no celular e no computador", () => {
     const css = readFileSync(resolve(process.cwd(), "src/app/globals.css"), "utf8");
 
     expect(css).toContain("@media (max-width: 640px)");
@@ -14,6 +14,8 @@ describe("layout responsivo do painel de configurações", () => {
     expect(css).toContain("overflow-x: auto;");
     expect(css).toContain("grid-template-columns: minmax(0, 1fr);");
     expect(css).toContain(".settings-scroll");
+    expect(css).not.toContain("  height: min(760px");
+    expect(css).toMatch(/\.settings-panel--bounded \{[^}]*height: auto;/);
   });
 
   it("mantém o fundo azul contínuo sem uma moldura preta no login", () => {

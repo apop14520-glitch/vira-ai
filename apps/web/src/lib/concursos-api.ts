@@ -29,23 +29,6 @@ export type TheoryChapter = {
 
 export type Theory = { summary: string; sources: string; chapters: TheoryChapter[] };
 
-export type Question = {
-  id: string;
-  organization_id: string;
-  topic_id: string;
-  statement: string;
-  option_a: string;
-  option_b: string;
-  option_c: string;
-  option_d: string;
-  option_e: string | null;
-  correct_option: QuestionOption;
-  explanation: string;
-  difficulty: QuestionDifficulty;
-  source: string;
-  created_at: string;
-};
-
 export type QuestionPublic = {
   id: string;
   topic_id: string;
@@ -98,8 +81,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const concursosApi = {
   listTopics: () => request<Topic[]>("/topics"),
   getTheory: (topicId: string) => request<Theory>(`/topics/${topicId}/theory`),
-  listQuestions: (topicId?: string) =>
-    request<Question[]>(`/questions${topicId ? `?topic_id=${topicId}` : ""}`),
   drawQuestions: (topicIds: string[], quantity: number) =>
     request<QuestionPublic[]>("/questions/draw", {
       method: "POST",

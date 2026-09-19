@@ -57,6 +57,20 @@ describe("PreferencesMenu", () => {
     });
   });
 
+  it("mostra só o tema em Aparência e só sessão e senha em Segurança", async () => {
+    render(<PreferencesMenu />);
+    fireEvent.click(screen.getByRole("button", { name: "Configurações" }));
+
+    expect(await screen.findByText("Tema da interface")).toBeInTheDocument();
+    expect(screen.queryByText("Idioma e região")).not.toBeInTheDocument();
+    expect(screen.queryByText("America/Manaus")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("menuitem", { name: /Segurança/ }));
+    await waitFor(() => expect(screen.getByText("admin")).toBeInTheDocument());
+    expect(screen.getByText("Alterar senha", { selector: "h3" })).toBeInTheDocument();
+    expect(screen.queryByText("Controles ativos")).not.toBeInTheDocument();
+  });
+
   it("mantém o painel fora do cabeçalho para não ser cortado no celular", async () => {
     render(<PreferencesMenu />);
     fireEvent.click(screen.getByRole("button", { name: "Configurações" }));

@@ -10,11 +10,11 @@ import { SiteFooter } from "@/components/site-footer";
 import { logout as logoutSession } from "@/lib/auth-api";
 
 const navigation = [
-  { href: "/", label: "Visão geral", symbol: "⌂" },
-  { href: "/business", label: "Business", symbol: "B" },
-  { href: "/sites", label: "Sites", symbol: "S" },
-  { href: "/studio", label: "Studio", symbol: "✦" },
-  { href: "/concursos", label: "Concursos", symbol: "C" },
+  { href: "/", label: "Visão geral", icon: "M3 11.5 12 4l9 7.5M5.5 10v9.5h13V10M10 19.5v-5h4v5" },
+  { href: "/business", label: "Business", icon: "M3.5 8h17v11h-17zM8.5 8V5.5h7V8M3.5 13h17" },
+  { href: "/sites", label: "Sites", icon: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM3 12h18M12 3c2.5 2.5 3.5 5.5 3.5 9S14.500 18.500 12 21c-2.500-2.500-3.500-5.500-3.500-9S9.500 5.500 12 3Z" },
+  { href: "/studio", label: "Studio", icon: "M12 3l1.8 5.2L19 10l-5.200 1.800L12 17l-1.800-5.200L5 10l5.200-1.800L12 3ZM18.500 16l.8 2.200 2.200.8-2.200.8-.8 2.200-.8-2.200-2.200-.8 2.200-.8.8-2.200Z" },
+  { href: "/concursos", label: "Concursos", icon: "M12 3 2.500 8 12 13l9.500-5L12 3ZM6 10.500V15c0 1.200 2.700 3 6 3s6-1.800 6-3v-4.500" },
 ];
 
 export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -113,10 +113,10 @@ function LogoutButton() {
   return <button type="button" onClick={() => void logout()} disabled={loading} className="rounded-xl border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300 transition hover:border-cyan-400/60 hover:bg-slate-900 hover:text-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 disabled:cursor-wait disabled:opacity-60">{loading ? "Saindo…" : "Sair"}</button>;
 }
 
-function NavItem({ href, label, symbol, active, compact = false }: { href: string; label: string; symbol: string; active: boolean; compact?: boolean }) {
+function NavItem({ href, label, icon, active, compact = false }: { href: string; label: string; icon: string; active: boolean; compact?: boolean }) {
   return (
     <Link href={href} aria-current={active ? "page" : undefined} className={`nav-item group flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold tracking-[-0.01em] transition ${compact ? "px-2.5 py-2" : "px-3 py-3"} ${active ? "bg-cyan-100 font-bold text-cyan-950 dark:bg-cyan-400/15 dark:text-cyan-100" : "text-slate-700 hover:bg-slate-950 hover:text-white dark:text-slate-300 dark:hover:bg-cyan-400 dark:hover:text-slate-950"}`}>
-      <span className={`flex h-7 w-7 items-center justify-center rounded-lg text-sm font-semibold leading-none transition ${active ? "bg-cyan-300 text-slate-950" : "bg-white text-cyan-700 group-hover:bg-cyan-300 group-hover:text-slate-950 dark:bg-slate-800 dark:text-cyan-300 dark:group-hover:bg-slate-950 dark:group-hover:text-cyan-300"}`}>{symbol}</span>
+      <span className={`flex h-7 w-7 items-center justify-center rounded-lg transition ${active ? "bg-cyan-300 text-slate-950" : "bg-white text-cyan-700 group-hover:bg-cyan-300 group-hover:text-slate-950 dark:bg-slate-800 dark:text-cyan-300 dark:group-hover:bg-slate-950 dark:group-hover:text-cyan-300"}`}><svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={icon} /></svg></span>
       <span>{label}</span>
     </Link>
   );

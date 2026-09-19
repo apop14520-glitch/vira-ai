@@ -12,6 +12,21 @@ import { concursosApi, ConcursosSummary, Topic } from "@/lib/concursos-api";
 type Tab = "conteudo" | "estudo";
 type ContentView = "teoria" | "questoes";
 
+const iconPaths = {
+  conteudo: "M4 5.5A1.5 1.5 0 0 1 5.5 4H19v13H5.5A1.5 1.5 0 0 0 4 18.5v-13ZM4 18.5A1.5 1.5 0 0 0 5.5 20H19v-3",
+  estudo: "M12 3 2.5 8 12 13l9.5-5L12 3ZM6 10.5v4.5c0 1.2 2.7 3 6 3s6-1.8 6-3v-4.5",
+  teoria: "M12 6.5C10.5 5 8 4.5 4 4.5v13c4 0 6.5.5 8 2 1.5-1.5 4-2 8-2v-13c-4 0-6.5.5-8 2ZM12 6.5v13",
+  questoes: "M9 6h11M9 12h11M9 18h11M3.5 6l1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2",
+} as const;
+
+function TabIcon({ name }: { name: keyof typeof iconPaths }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d={iconPaths[name]} />
+    </svg>
+  );
+}
+
 const tabs: { id: Tab; label: string }[] = [
   { id: "conteudo", label: "Conteúdo" },
   { id: "estudo", label: "Sessão de estudo" },
@@ -93,7 +108,7 @@ export function ConcursosDashboard() {
         )}
       </section>
 
-      <div role="tablist" aria-label="Áreas do VIRA Concursos" className="grid max-w-md grid-cols-2 gap-2">
+      <div role="tablist" aria-label="Áreas do VIRA Concursos" className={tabTone.list}>
         {tabs.map((item) => (
           <button
             key={item.id}
@@ -105,6 +120,7 @@ export function ConcursosDashboard() {
             onClick={() => openTab(item.id)}
             className={tab === item.id ? tabTone.active : tabTone.idle}
           >
+            <TabIcon name={item.id} />
             {item.label}
           </button>
         ))}
@@ -115,9 +131,9 @@ export function ConcursosDashboard() {
           role="tabpanel"
           id="concursos-panel-conteudo"
           aria-labelledby="concursos-tab-conteudo"
-          className="space-y-4 sm:space-y-6"
+          className="space-y-5 sm:space-y-6"
         >
-          <div role="tablist" aria-label="Conteúdo" className="grid max-w-md grid-cols-2 gap-2">
+          <div role="tablist" aria-label="Conteúdo" className={tabTone.list}>
             {contentViews.map((item) => (
               <button
                 key={item.id}
@@ -129,6 +145,7 @@ export function ConcursosDashboard() {
                 onClick={() => openContentView(item.id)}
                 className={contentView === item.id ? tabTone.active : tabTone.idle}
               >
+                <TabIcon name={item.id} />
                 {item.label}
               </button>
             ))}

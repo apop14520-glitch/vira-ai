@@ -3,7 +3,8 @@
 import { ReactNode, useState } from "react";
 
 import { ExamRunner } from "@/components/concursos-exam";
-import { isExamTopic, useScrollIntoViewOnChange } from "@/components/concursos-shared";
+import { ChoiceGroup } from "@/components/concursos-filter";
+import { useScrollIntoViewOnChange } from "@/components/concursos-shared";
 import { StudyRunner } from "@/components/concursos-study";
 import { TopicPicker } from "@/components/concursos-topic-picker";
 import { ui } from "@/components/concursos-ui";
@@ -15,20 +16,18 @@ type Run = { id: number; mode: Mode; questions: QuestionPublic[]; minutes: numbe
 const MAX_QUESTIONS = 100;
 const MINUTES_PER_QUESTION = 2;
 
-const modes: { id: Mode; title: string; text: string }[] = [
-  { id: "estudo", title: "Estudo", text: "Uma questão por vez, com gabarito e explicação logo depois de responder. Sem cronômetro." },
-  { id: "simulado", title: "Simulado", text: "Prova cronometrada: você responde tudo e só vê o gabarito e a nota no final." },
-];
-
-const modeCard =
-  "flex cursor-pointer flex-col gap-1 rounded-xl border border-slate-300 bg-white p-4 text-left transition hover:border-cyan-400 hover:bg-cyan-50 has-[:checked]:border-cyan-500 has-[:checked]:bg-cyan-100 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-cyan-400/60 dark:border-slate-700 dark:bg-slate-950/40 dark:hover:border-cyan-400/50 dark:hover:bg-cyan-400/10 dark:has-[:checked]:border-cyan-400/60 dark:has-[:checked]:bg-cyan-400/15";
+const modes: Record<Mode, { label: string; text: string }> = {
+  estudo: { label: "Estudo", text: "Uma questão por vez, com gabarito e explicação logo depois de responder. Sem cronômetro." },
+  simulado: { label: "Simulado", text: "Prova cronometrada: você responde tudo e só vê o gabarito e a nota no final." },
+};
+const modeOptions = (Object.keys(modes) as Mode[]).map((id) => ({ id, label: modes[id].label }));
 
 type PracticeProps = {
   topics: Topic[];
   /** Assuntos já marcados ao abrir (por exemplo, vindos do botão "Praticar" da teoria). */
   initialTopicIds?: string[];
   onOpenTheory?: (topicId: string) => void;
-  /** Menu de navegação do Concursos, mostrado ao lado da configuração. */
+  /** Menu de navegação do Concursos, mostrado no topo da coluna ao lado da configuração. */
   menu?: ReactNode;
 };
 
@@ -45,11 +44,6 @@ export function PracticeHub({ topics, initialTopicIds = [], onOpenTheory, menu }
   const rootRef = useScrollIntoViewOnChange(run ? "run" : "setup");
 
   const available = topics.filter((topic) => topic.question_count > 0);
-  const integratedTopics = available.filter(isExamTopic);
-  const integratedTotal = Math.min(
-    MAX_QUESTIONS,
-    integratedTopics.reduce((sum, topic) => sum + topic.question_count, 0),
-  );
 
   const pool = available.filter((topic) => topicIds.length === 0 || topicIds.includes(topic.id));
   const poolTotal = pool.reduce((sum, topic) => sum + topic.question_count, 0);
@@ -57,13 +51,6 @@ export function PracticeHub({ topics, initialTopicIds = [], onOpenTheory, menu }
 
   const theoryTopic =
     topicIds.length === 1 ? topics.find((topic) => topic.id === topicIds[0] && topic.has_theory) : undefined;
-
-  const selectIntegrated = () => {
-    setMode("simulado");
-    setTopicIds(integratedTopics.map((topic) => topic.id));
-    setQuantity(integratedTotal);
-    setMinutes(null);
-  };
 
   const start = async () => {
     setBusy(true);
@@ -94,40 +81,8 @@ export function PracticeHub({ topics, initialTopicIds = [], onOpenTheory, menu }
       <section className={`${ui.card} space-y-6`}>
         <div>
           <h2 className={ui.title}>Sessão de estudo</h2>
-          <p className={`mt-1 ${ui.muted}`}>Escolha os assuntos, o modo e a quantidade de questões.</p>
+          <p className={`mt-1 ${ui.muted}`}>{modes[mode].text}</p>
         </div>
-
-        <fieldset className="space-y-3">
-          <legend className={ui.heading}>Modo</legend>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {modes.map((item) => (
-              <label key={item.id} className={modeCard}>
-                <input
-                  type="radio"
-                  name="concursos-modo"
-                  value={item.id}
-                  checked={mode === item.id}
-                  onChange={() => setMode(item.id)}
-                  className="sr-only"
-                />
-                <span className="text-sm font-black text-slate-950 dark:text-white">{item.title}</span>
-                <span className="text-sm leading-5 text-slate-700 dark:text-slate-300">{item.text}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-
-        {integratedTopics.length > 0 && (
-          <div className={`${ui.panel} flex flex-wrap items-center justify-between gap-3`}>
-            <div className="min-w-0">
-              <p className={ui.heading}>Simulado Integrado</p>
-              <p className={ui.muted}>{integratedTotal} questões de vários assuntos, em ordem aleatória.</p>
-            </div>
-            <button type="button" onClick={selectIntegrated} className={ui.secondaryButton}>
-              Montar Simulado Integrado
-            </button>
-          </div>
-        )}
 
         <TopicPicker
           legend="Assuntos (nenhum marcado = todos)"
@@ -180,13 +135,14 @@ export function PracticeHub({ topics, initialTopicIds = [], onOpenTheory, menu }
         </button>
       </section>
     );
-    content = menu ? (
+    content = (
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <div className={`${ui.card} lg:sticky lg:top-24`}>{menu}</div>
+        <div className={`${ui.card} divide-y divide-slate-200 dark:divide-slate-800 lg:sticky lg:top-24`}>
+          {menu}
+          <ChoiceGroup bare title="Modo" value={mode} onChange={(next) => setMode(next as Mode)} options={modeOptions} />
+        </div>
         {setup}
       </div>
-    ) : (
-      setup
     );
   }
 

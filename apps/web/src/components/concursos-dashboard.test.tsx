@@ -79,8 +79,10 @@ describe("ConcursosDashboard", () => {
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Sessão de estudo" }));
     expect(screen.getByRole("button", { name: "Começar sessão" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: /Simulado/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Montar Simulado Integrado" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Estudo" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Simulado" })).not.toBeChecked();
+    expect(screen.queryByRole("button", { name: "Montar Simulado Integrado" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Simulados" })).toBeInTheDocument();
   });
 
   it("põe o menu dentro da caixa de assuntos da teoria, sem opção de banco de questões", async () => {

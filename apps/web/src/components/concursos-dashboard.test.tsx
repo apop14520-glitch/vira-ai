@@ -103,10 +103,23 @@ describe("ConcursosDashboard", () => {
     expect(await screen.findByRole("heading", { name: "Banco de questões" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Assuntos" })).not.toBeInTheDocument();
 
-    fireEvent.click(areas.getByRole("checkbox", { name: "Sessão de estudo" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Sessão de estudo" }));
     expect(screen.getByRole("button", { name: "Começar sessão" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /Simulado/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Montar Simulado Integrado" })).toBeInTheDocument();
+  });
+
+  it("põe o menu dentro da caixa de assuntos da teoria e não repete título nem contagem no banco de questões", async () => {
+    render(<ConcursosDashboard />);
+
+    const subjects = (await screen.findByRole("heading", { name: "Assuntos" })).closest("div.space-y-3") as HTMLElement;
+    expect(within(subjects).getByRole("button", { name: "Área" })).toBeInTheDocument();
+    expect(within(subjects).getByRole("button", { name: "Conteúdo" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /Questões/ }));
+    await screen.findByRole("heading", { name: "Banco de questões", hidden: true });
+    expect(screen.getByRole("button", { name: "Área" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Banco de questões", hidden: true })).toHaveClass("sr-only");
   });
 
   it("é somente leitura: não oferece criar nem excluir tópicos e questões", async () => {

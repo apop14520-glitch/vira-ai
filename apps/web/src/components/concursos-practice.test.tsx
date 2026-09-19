@@ -206,14 +206,14 @@ describe("PracticeHub", () => {
 
     await startIntegratedExam();
 
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" }));
     const callsAfterStart = scrollIntoView.mock.calls.length;
 
     fireEvent.click(screen.getByRole("button", { name: "Finalizar simulado" }));
     fireEvent.click(screen.getByRole("button", { name: "Sim, finalizar" }));
     await screen.findByText("Resultado do simulado");
 
-    expect(scrollIntoView.mock.calls.length).toBeGreaterThan(callsAfterStart);
+    await waitFor(() => expect(scrollIntoView.mock.calls.length).toBeGreaterThan(callsAfterStart));
     delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
   });
 

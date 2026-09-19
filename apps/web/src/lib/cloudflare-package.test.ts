@@ -64,7 +64,7 @@ describe("contrato de build Cloudflare", () => {
       "vira-ai-web",
       "API_INTERNAL_URL",
       "137-131-255-128.nip.io",
-      "feat/admin-ui-cloudflare",
+      "branch de produção `main`",
       "pnpm --dir apps/web exec wrangler versions upload",
       "rollback",
     ]) {

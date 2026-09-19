@@ -106,32 +106,29 @@ O navegador conversa com a API por um proxy same-origin em `/api/...`; a URL
 interna fica somente em `API_INTERNAL_URL` no servidor. Isso mantém o frontend
 independente do endereço local ou remoto da API.
 
-### Topologia híbrida preparada para Cloudflare
+### Topologia de produção
 
 | Serviço | Onde roda | Função | URL/origem |
 | --- | --- | --- | --- |
-| `vira-ai-web` | Cloudflare Workers + OpenNext | Frontend e proxy same-origin | `API_INTERNAL_URL` server-side |
-| `vira-api` | Railway | FastAPI, autenticação, Business e integrações | `https://vira-api-production.up.railway.app` |
-| frontend de rollback | Railway | Continuidade durante a validação | `https://vira-ai-production.up.railway.app` |
+| `vira-ai-web` | Cloudflare Workers + OpenNext | Frontend e proxy same-origin | `https://vira-ai-web.apop14520.workers.dev` |
+| `vira-api` | VM Oracle Cloud (systemd + Nginx) | FastAPI, autenticação, Business, Concursos e integrações | `https://137-131-255-128.nip.io` |
+| PostgreSQL | VM Oracle Cloud (local) | Persistência, sobrevive a deploy e reboot | `127.0.0.1:5432` (não exposto) |
 
 O Worker usa somente a variável server-side `API_INTERNAL_URL`; ela não é
-`NEXT_PUBLIC_*` e não aparece no navegador. O domínio `railway.internal` não
-deve ser usado pelo browser ou pelo Worker externo. Os scripts
-`preview`, `deploy`, `cf-typegen` e `check:cloudflare` ficam em
-`apps/web/package.json`, sem remover os comandos atuais do Railway.
+`NEXT_PUBLIC_*` e não aparece no navegador. Os scripts `preview`, `deploy`,
+`cf-typegen` e `check:cloudflare` ficam em `apps/web/package.json`.
 
-Consulte o guia operacional de publicação híbrida em
-[`docs/deployment/CLOUDFLARE.md`](docs/deployment/CLOUDFLARE.md) antes de
-conectar o repositório ao Cloudflare. A API e o frontend Railway continuam
-sendo o rollback até a aprovação explícita da promoção.
+O frontend é publicado pelo Cloudflare Workers Builds: cada merge na branch
+`main` gera uma versão e a coloca em produção. Consulte
+[`docs/deployment/CLOUDFLARE.md`](docs/deployment/CLOUDFLARE.md) e
+[`docs/deployment/CLOUDFLARE-BUILD.md`](docs/deployment/CLOUDFLARE-BUILD.md)
+para o guia operacional.
 
-### Configuração publicada no Railway
+### Configuração da API na VM
 
-O Railway fornece variáveis por serviço. Se o projeto estiver dividido em
-`vira-api` e `vira-web`, configure cada grupo no serviço correspondente e
-aplique o deploy das alterações no painel do Railway.
-
-No serviço `vira-api`, use os nomes canônicos abaixo:
+As variáveis da API ficam no arquivo `/opt/vira-ai/apps/api/.env` da VM, lido
+pelo serviço `vira-api`. Depois de alterá-lo, reinicie com
+`sudo systemctl restart vira-api`. Use os nomes canônicos abaixo:
 
 ```text
 ADMIN_USERNAME=admin
@@ -141,33 +138,33 @@ ENVIRONMENT=production
 API_ACCESS_TOKEN=<token de integração da API>
 ADMIN_ACCESS_TOKEN=<token administrativo diferente>
 AUTH_ORGANIZATION_ID=<UUID estável da organização>
-CORS_ORIGINS=<domínio público do vira-web>
+CORS_ORIGINS=<domínio público do frontend>
+DATABASE_URL=postgresql://vira_api:<senha>@127.0.0.1:5432/vira_api
+FOURSQUARE_API_KEY=<chave da busca de lugares do Business>
 ```
 
-No serviço `vira-web`, configure apenas o destino server-side da API:
+No Worker Cloudflare, configure apenas o destino server-side da API:
 
 ```text
-API_INTERNAL_URL=<URL base do vira-api>
+API_INTERNAL_URL=https://137-131-255-128.nip.io
 ```
 
 `API_INTERNAL_URL` não deve ficar no frontend como `NEXT_PUBLIC_*` e não deve
 terminar em `/login`, `/api` ou `/health`. Os tokens não são a senha do
 formulário de login. `ADMIN_INITIAL_PASSWORD` serve somente para criar a
-primeira credencial; se uma credencial já existir no banco persistido, ela não
-será substituída automaticamente.
+primeira credencial; se uma credencial já existir no banco, ela não será
+substituída automaticamente.
 
-Para usar a ativação pela página, defina `ADMIN_SETUP_TOKEN` no serviço
-`vira-api` do Railway e deixe `ADMIN_INITIAL_PASSWORD` sem valor. Nunca defina
-o código, usuário ou senha no Worker Cloudflare. Confirme que `DATABASE_URL`
-aponta para um volume persistente no Railway antes de cadastrar o primeiro
-administrador; um novo deploy da API não deve apagar a credencial. Remova ou
-rotacione o código de ativação após o primeiro acesso.
+Para usar a ativação pela página, defina `ADMIN_SETUP_TOKEN` no `.env` da VM e
+deixe `ADMIN_INITIAL_PASSWORD` sem valor. Nunca defina o código, usuário,
+senha ou chave Foursquare no Worker Cloudflare. O banco é o PostgreSQL local da
+VM, então um novo deploy da API não apaga a credencial. Remova ou rotacione o
+código de ativação após o primeiro acesso.
 
 Por compatibilidade com uma configuração antiga, o backend também reconhece
 `SENHA_INICIAL_DO_ADMINISTRADOR`, `NOME_DE_USUÁRIO_DO_ADMINISTRADOR`,
 `AMBIENTE` e `ORIGENS_CORS`, mas os nomes em inglês são o contrato recomendado.
-Não coloque valores reais no repositório. O Railway permite revisar e aplicar
-as alterações de variáveis no próprio painel.
+Não coloque valores reais no repositório.
 
 ## Princípios de engenharia
 

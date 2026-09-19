@@ -88,22 +88,22 @@ describe("ConcursosDashboard", () => {
   it("tem só duas abas: Conteúdo (teoria e questões) e Sessão de estudo (com os simulados)", async () => {
     render(<ConcursosDashboard />);
 
-    const areas = within(await screen.findByRole("tablist", { name: "Áreas do VIRA Concursos" }));
-    expect(areas.getAllByRole("tab").map((item) => item.textContent)).toEqual(["Conteúdo", "Sessão de estudo"]);
-    expect(areas.getByRole("tab", { name: "Conteúdo" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.queryByRole("tab", { name: "Simulados" })).not.toBeInTheDocument();
+    const areas = within((await screen.findByRole("button", { name: "Área" })).closest("section") as HTMLElement);
+    expect(areas.getAllByRole("checkbox").map((item) => item.closest("label")?.textContent)).toEqual(["Conteúdo", "Sessão de estudo"]);
+    expect(areas.getByRole("checkbox", { name: "Conteúdo" })).toBeChecked();
+    expect(screen.queryByRole("checkbox", { name: "Simulados" })).not.toBeInTheDocument();
     expect(screen.getByText("14 questões")).toBeInTheDocument();
 
-    const views = within(screen.getByRole("tablist", { name: "Conteúdo" }));
-    expect(views.getByRole("tab", { name: "Teoria" })).toHaveAttribute("aria-selected", "true");
+    const views = within(screen.getByRole("button", { name: "Conteúdo" }).closest("section") as HTMLElement);
+    expect(views.getByRole("checkbox", { name: /Teoria/ })).toBeChecked();
     expect(screen.getByRole("heading", { name: "Assuntos" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Começar sessão" })).not.toBeInTheDocument();
 
-    fireEvent.click(views.getByRole("tab", { name: "Questões" }));
+    fireEvent.click(views.getByRole("checkbox", { name: /Questões/ }));
     expect(await screen.findByRole("heading", { name: "Banco de questões" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Assuntos" })).not.toBeInTheDocument();
 
-    fireEvent.click(areas.getByRole("tab", { name: "Sessão de estudo" }));
+    fireEvent.click(areas.getByRole("checkbox", { name: "Sessão de estudo" }));
     expect(screen.getByRole("button", { name: "Começar sessão" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /Simulado/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Montar Simulado Integrado" })).toBeInTheDocument();
@@ -111,7 +111,7 @@ describe("ConcursosDashboard", () => {
 
   it("é somente leitura: não oferece criar nem excluir tópicos e questões", async () => {
     render(<ConcursosDashboard />);
-    fireEvent.click(await screen.findByRole("tab", { name: "Questões" }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /^Questões/ }));
     await screen.findByRole("heading", { name: "Banco de questões" });
 
     expect(screen.queryByText("Novo tópico")).not.toBeInTheDocument();
@@ -123,7 +123,7 @@ describe("ConcursosDashboard", () => {
 
   it("não lista no filtro do banco os assuntos que só têm teoria", async () => {
     render(<ConcursosDashboard />);
-    fireEvent.click(await screen.findByRole("tab", { name: "Questões" }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /^Questões/ }));
     await screen.findByRole("heading", { name: "Banco de questões" });
 
     expect(screen.getByRole("checkbox", { name: /Parte 1 — Fundamentos/ })).toBeInTheDocument();
@@ -133,36 +133,36 @@ describe("ConcursosDashboard", () => {
 
   it("leva da teoria para a sessão de estudo com o assunto já marcado", async () => {
     render(<ConcursosDashboard />);
-    await screen.findByRole("tab", { name: "Conteúdo" });
+    await screen.findByRole("checkbox", { name: /^Conteúdo/ });
     fireEvent.click(screen.getByRole("button", { name: "Parte 1 — Fundamentos" }));
     await screen.findByText("Texto do capítulo um.");
 
     fireEvent.click(screen.getByRole("button", { name: "Praticar questões deste tópico" }));
 
-    expect(screen.getByRole("tab", { name: "Sessão de estudo" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("checkbox", { name: /^Sessão de estudo/ })).toBeChecked();
     expect(screen.getByLabelText(/Parte 1 — Fundamentos/)).toBeChecked();
 
-    fireEvent.click(screen.getByRole("tab", { name: "Conteúdo" }));
-    fireEvent.click(screen.getByRole("tab", { name: "Sessão de estudo" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Conteúdo/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Sessão de estudo/ }));
     expect(screen.getByLabelText(/Parte 1 — Fundamentos/)).not.toBeChecked();
   });
 
   it("leva da sessão de estudo para a teoria do assunto marcado", async () => {
     render(<ConcursosDashboard />);
-    fireEvent.click(await screen.findByRole("tab", { name: "Sessão de estudo" }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /^Sessão de estudo/ }));
     fireEvent.click(screen.getByLabelText(/Parte 1 — Fundamentos/));
 
     fireEvent.click(screen.getByRole("button", { name: "Ler a teoria antes das questões" }));
 
-    expect(screen.getByRole("tab", { name: "Conteúdo" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tab", { name: "Teoria" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("checkbox", { name: /^Conteúdo/ })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /^Teoria/ })).toBeChecked();
     expect(await screen.findByText("Texto do capítulo um.")).toBeInTheDocument();
     expect(api.getTheory).toHaveBeenCalledWith("t1");
   });
 
   it("ordena os assuntos do filtro de 1 a 28 e deixa os simulados por último", async () => {
     render(<ConcursosDashboard />);
-    fireEvent.click(await screen.findByRole("tab", { name: "Questões" }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /^Questões/ }));
     await screen.findByRole("heading", { name: "Banco de questões" });
 
     const group = screen.getByRole("button", { name: "Assuntos" }).closest("section") as HTMLElement;
@@ -184,7 +184,7 @@ describe("ConcursosDashboard", () => {
       question("q3", "t2", "Enunciado de outro assunto?"),
     ]);
     render(<ConcursosDashboard />);
-    fireEvent.click(await screen.findByRole("tab", { name: "Questões" }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /^Questões/ }));
     await screen.findByText("Enunciado da primeira?");
 
     fireEvent.click(screen.getByRole("checkbox", { name: /Parte 1 — Fundamentos/ }));
@@ -200,7 +200,7 @@ describe("ConcursosDashboard", () => {
     setViewport("mobile");
     api.listQuestions.mockResolvedValue([question("q1", "t1", "Enunciado no celular?")]);
     render(<ConcursosDashboard />);
-    fireEvent.click(await screen.findByRole("tab", { name: "Questões" }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /^Questões/ }));
     await screen.findByText("Enunciado no celular?");
 
     const header = screen.getByRole("button", { name: "Assuntos" });

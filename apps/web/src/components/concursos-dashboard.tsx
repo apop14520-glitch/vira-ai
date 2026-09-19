@@ -2,40 +2,16 @@
 
 import { useEffect, useState } from "react";
 
+import { ChoiceGroup } from "@/components/concursos-filter";
 import { PracticeHub } from "@/components/concursos-practice";
 import { ConcursosQuestionBank } from "@/components/concursos-question-bank";
 import { sortTopics } from "@/components/concursos-shared";
 import { ConcursosTheory } from "@/components/concursos-theory";
-import { tab as tabTone, ui } from "@/components/concursos-ui";
+import { ui } from "@/components/concursos-ui";
 import { concursosApi, ConcursosSummary, Topic } from "@/lib/concursos-api";
 
 type Tab = "conteudo" | "estudo";
 type ContentView = "teoria" | "questoes";
-
-const iconPaths = {
-  conteudo: "M4 5.5A1.5 1.5 0 0 1 5.5 4H19v13H5.5A1.5 1.5 0 0 0 4 18.5v-13ZM4 18.5A1.5 1.5 0 0 0 5.5 20H19v-3",
-  estudo: "M12 3 2.5 8 12 13l9.5-5L12 3ZM6 10.5v4.5c0 1.2 2.7 3 6 3s6-1.8 6-3v-4.5",
-  teoria: "M12 6.5C10.5 5 8 4.5 4 4.5v13c4 0 6.5.5 8 2 1.5-1.5 4-2 8-2v-13c-4 0-6.5.5-8 2ZM12 6.5v13",
-  questoes: "M9 6h11M9 12h11M9 18h11M3.5 6l1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2",
-} as const;
-
-function TabIcon({ name }: { name: keyof typeof iconPaths }) {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d={iconPaths[name]} />
-    </svg>
-  );
-}
-
-const tabs: { id: Tab; label: string }[] = [
-  { id: "conteudo", label: "Conteúdo" },
-  { id: "estudo", label: "Sessão de estudo" },
-];
-
-const contentViews: { id: ContentView; label: string }[] = [
-  { id: "teoria", label: "Teoria" },
-  { id: "questoes", label: "Questões" },
-];
 
 export function ConcursosDashboard() {
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -108,57 +84,41 @@ export function ConcursosDashboard() {
         )}
       </section>
 
-      <div role="tablist" aria-label="Áreas do VIRA Concursos" className={tabTone.list}>
-        {tabs.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            id={`concursos-tab-${item.id}`}
-            aria-selected={tab === item.id}
-            aria-controls={`concursos-panel-${item.id}`}
-            onClick={() => openTab(item.id)}
-            className={tab === item.id ? tabTone.active : tabTone.idle}
-          >
-            <TabIcon name={item.id} />
-            {item.label}
-          </button>
-        ))}
+      <div className={`grid gap-4 ${tab === "conteudo" ? "sm:grid-cols-2" : ""} max-w-2xl`}>
+        <ChoiceGroup
+          title="Área"
+          value={tab}
+          onChange={(next) => openTab(next as Tab)}
+          options={[
+            { id: "conteudo", label: "Conteúdo" },
+            { id: "estudo", label: "Sessão de estudo" },
+          ]}
+        />
+        {tab === "conteudo" && (
+          <ChoiceGroup
+            title="Conteúdo"
+            value={contentView}
+            onChange={(next) => openContentView(next as ContentView)}
+            options={[
+              { id: "teoria", label: "Teoria", count: theoryCount },
+              { id: "questoes", label: "Questões", count: bankTopics.reduce((sum, topic) => sum + topic.question_count, 0) },
+            ]}
+          />
+        )}
       </div>
 
       {tab === "conteudo" && (
         <div
-          role="tabpanel"
-          id="concursos-panel-conteudo"
-          aria-labelledby="concursos-tab-conteudo"
-          className="space-y-5 sm:space-y-6"
+          className="space-y-4 sm:space-y-6"
         >
-          <div role="tablist" aria-label="Conteúdo" className={tabTone.list}>
-            {contentViews.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                role="tab"
-                id={`concursos-view-${item.id}`}
-                aria-selected={contentView === item.id}
-                aria-controls={`concursos-view-panel-${item.id}`}
-                onClick={() => openContentView(item.id)}
-                className={contentView === item.id ? tabTone.active : tabTone.idle}
-              >
-                <TabIcon name={item.id} />
-                {item.label}
-              </button>
-            ))}
-          </div>
-
           {contentView === "teoria" && (
-            <div role="tabpanel" id="concursos-view-panel-teoria" aria-labelledby="concursos-view-teoria">
+            <div>
               <ConcursosTheory topics={topics} initialTopicId={theoryTopicId} onPractice={practiceTopic} />
             </div>
           )}
 
           {contentView === "questoes" && (
-            <div role="tabpanel" id="concursos-view-panel-questoes" aria-labelledby="concursos-view-questoes">
+            <div>
               <ConcursosQuestionBank topics={bankTopics} onError={setMessage} />
             </div>
           )}
@@ -166,7 +126,7 @@ export function ConcursosDashboard() {
       )}
 
       {tab === "estudo" && (
-        <div role="tabpanel" id="concursos-panel-estudo" aria-labelledby="concursos-tab-estudo">
+        <div>
           <PracticeHub topics={topics} initialTopicIds={studyTopicIds} onOpenTheory={readTheory} />
         </div>
       )}

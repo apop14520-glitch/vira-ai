@@ -116,3 +116,44 @@ export function FilterGroup({
     </section>
   );
 }
+
+type ChoiceGroupProps = {
+  title: string;
+  options: FilterOption[];
+  value: string;
+  onChange: (id: string) => void;
+  defaultOpen?: boolean;
+};
+
+/** Menu de escolha única com caixas de marcação: sempre há uma opção marcada e marcar outra troca a escolha. */
+export function ChoiceGroup({ title, options, value, onChange, defaultOpen = true }: ChoiceGroupProps) {
+  const [open, setOpen] = useState(defaultOpen);
+  const bodyId = useId();
+
+  return (
+    <section className={tone.card}>
+      <button type="button" aria-expanded={open} aria-controls={bodyId} onClick={() => setOpen((current) => !current)} className={tone.header}>
+        <span className={tone.title}>{title}</span>
+        <Chevron open={open} />
+      </button>
+      {open && (
+        <ul id={bodyId} className="mt-3 space-y-0.5">
+          {options.map((option) => (
+            <li key={option.id}>
+              <label className={tone.option}>
+                <input
+                  type="checkbox"
+                  checked={value === option.id}
+                  onChange={() => onChange(option.id)}
+                  className={tone.checkbox}
+                />
+                <span className="min-w-0">{option.label}</span>
+                {option.count !== undefined && <span className={tone.count}>{option.count}</span>}
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}

@@ -20,8 +20,8 @@ Foursquare ou valor de `API_ACCESS_TOKEN` deve entrar no bundle do navegador.
 
 ## Pré-requisitos
 
-1. O código deve estar no repositório conectado ao Cloudflare, na branch
-   `feat/admin-ui-cloudflare` para o primeiro preview.
+1. O código deve estar no repositório conectado ao Cloudflare. A branch de
+   produção é `main`; branches e pull requests geram só previews.
 2. A API pública precisa responder em
    `https://137-131-255-128.nip.io/health`.
 3. A conta do Cloudflare deve estar autenticada no painel ou no ambiente de
@@ -79,7 +79,7 @@ testes de contrato em `apps/web/src/lib/cloudflare-package.test.ts`.
 ## Publicação pelo repositório conectado
 
 Configure o projeto do Cloudflare Workers para usar a raiz do repositório e a
-branch `feat/admin-ui-cloudflare`. Como o Workers Builds separa a compilação da
+branch de produção `main` (Settings > Builds > Branch control). Como o Workers Builds separa a compilação da
 publicação, use estes comandos no painel:
 
 Build command:

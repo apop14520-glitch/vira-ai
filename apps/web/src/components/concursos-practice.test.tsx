@@ -46,8 +46,14 @@ const graded = {
   ],
 };
 
+const chooseIntegratedExam = () => {
+  fireEvent.click(screen.getByRole("checkbox", { name: "Simulado" }));
+  const exams = within(screen.getByRole("button", { name: "Simulados" }).closest("section") as HTMLElement);
+  exams.getAllByRole("checkbox").forEach((box) => fireEvent.click(box));
+};
+
 const startIntegratedExam = async () => {
-  fireEvent.click(screen.getByRole("button", { name: "Montar Simulado Integrado" }));
+  chooseIntegratedExam();
   fireEvent.click(screen.getByRole("button", { name: "Iniciar simulado" }));
   await screen.findByText("1. Primeira da prova?");
 };
@@ -68,12 +74,14 @@ describe("PracticeHub", () => {
   it("reúne estudo e simulado numa tela só, com os assuntos escolhidos uma única vez", () => {
     render(<PracticeHub topics={topics} />);
 
-    expect(screen.getByRole("radio", { name: /Estudo/ })).toBeChecked();
-    expect(screen.getByRole("radio", { name: /Simulado/ })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Estudo" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Simulado" })).not.toBeChecked();
     expect(screen.getAllByRole("button", { name: /Começar sessão/ })).toHaveLength(1);
     expect(screen.queryByLabelText(/Tempo do simulado/)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("radio", { name: /Simulado/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Simulado" }));
+    expect(screen.getByRole("checkbox", { name: "Simulado" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Estudo" })).not.toBeChecked();
     expect(screen.getByLabelText(/Tempo do simulado/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Iniciar simulado" })).toBeInTheDocument();
     expect(screen.getAllByText("Assuntos (nenhum marcado = todos)")).toHaveLength(1);
@@ -134,21 +142,23 @@ describe("PracticeHub", () => {
     expect(screen.getByLabelText(/Redes/)).toBeChecked();
   });
 
-  it("monta o Simulado Integrado com todas as questões dos tópicos de simulado", async () => {
+  it("monta o simulado marcando os conjuntos de simulado, sem um atalho separado", async () => {
     render(<PracticeHub topics={topics} />);
 
-    expect(screen.getByText("32 questões de vários assuntos, em ordem aleatória.")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Montar Simulado Integrado" }));
+    expect(screen.queryByRole("button", { name: "Montar Simulado Integrado" })).not.toBeInTheDocument();
+    expect(screen.queryByText("32 questões de vários assuntos, em ordem aleatória.")).not.toBeInTheDocument();
+    chooseIntegratedExam();
 
-    expect(screen.getByRole("radio", { name: /Simulado/ })).toBeChecked();
-    expect(screen.getByLabelText(/Quantidade de questões/)).toHaveValue(32);
-    expect(screen.getByLabelText(/Tempo do simulado/)).toHaveValue(64);
+    expect(screen.getByRole("checkbox", { name: "Simulado" })).toBeChecked();
+    expect(screen.getByText("32 questões disponíveis nos assuntos escolhidos.")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Quantidade de questões/)).toHaveValue(10);
+    expect(screen.getByLabelText(/Tempo do simulado/)).toHaveValue(20);
 
     fireEvent.click(screen.getByRole("button", { name: "Iniciar simulado" }));
 
     expect(await screen.findByText("1. Primeira da prova?")).toBeInTheDocument();
-    expect(api.drawQuestions).toHaveBeenCalledWith(["s1", "s2"], 32);
-    expect(screen.getByText("Tempo restante: 64:00")).toBeInTheDocument();
+    expect(api.drawQuestions).toHaveBeenCalledWith(["s1", "s2"], 10);
+    expect(screen.getByText("Tempo restante: 20:00")).toBeInTheDocument();
   });
 
   it("não revela gabarito durante a prova e corrige tudo no final, contando as em branco", async () => {
@@ -180,7 +190,7 @@ describe("PracticeHub", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     render(<PracticeHub topics={topics} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Montar Simulado Integrado" }));
+    chooseIntegratedExam();
     fireEvent.change(screen.getByLabelText(/Tempo do simulado/), { target: { value: "1" } });
     fireEvent.click(screen.getByRole("button", { name: "Iniciar simulado" }));
     await screen.findByText("1. Primeira da prova?");
@@ -221,7 +231,7 @@ describe("PracticeHub", () => {
     render(<PracticeHub topics={topics} />);
 
     fireEvent.click(screen.getByLabelText(/Redes/));
-    fireEvent.click(screen.getByRole("radio", { name: /Simulado/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Simulado" }));
 
     expect(screen.getByText("5 questões disponíveis nos assuntos escolhidos.")).toBeInTheDocument();
     expect(screen.getByLabelText(/Tempo do simulado/)).toHaveValue(10);
@@ -231,7 +241,7 @@ describe("PracticeHub", () => {
     render(<PracticeHub topics={topics} />);
 
     fireEvent.click(screen.getByLabelText(/Redes/));
-    fireEvent.click(screen.getByRole("radio", { name: /Simulado/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Simulado" }));
     fireEvent.change(screen.getByLabelText(/Tempo do simulado/), { target: { value: "0" } });
     fireEvent.click(screen.getByRole("button", { name: "Iniciar simulado" }));
 

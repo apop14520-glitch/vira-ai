@@ -71,6 +71,18 @@ describe("PreferencesMenu", () => {
     expect(screen.queryByText("Controles ativos")).not.toBeInTheDocument();
   });
 
+  it("mostra só a chave do Foursquare em Conexões, sem o cartão de saúde do sistema", async () => {
+    render(<PreferencesMenu />);
+    fireEvent.click(screen.getByRole("button", { name: "Configurações" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /Conexões/ }));
+
+    expect(await screen.findByText("Foursquare Places")).toBeInTheDocument();
+    expect(screen.getByLabelText("Chave de serviço")).toBeInTheDocument();
+    expect(screen.queryByText("Saúde do sistema")).not.toBeInTheDocument();
+    expect(screen.queryByText("API FastAPI")).not.toBeInTheDocument();
+    expect(screen.queryByText("SQLite")).not.toBeInTheDocument();
+  });
+
   it("mantém o painel fora do cabeçalho para não ser cortado no celular", async () => {
     render(<PreferencesMenu />);
     fireEvent.click(screen.getByRole("button", { name: "Configurações" }));

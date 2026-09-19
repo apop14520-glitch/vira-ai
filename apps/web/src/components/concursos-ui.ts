@@ -42,11 +42,12 @@ export const topicRow = {
 } as const;
 
 const tabLayout =
-  "min-h-11 rounded-xl border px-3 py-2 text-center text-sm font-bold leading-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60";
+  "flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 py-2 text-center text-sm font-bold leading-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60";
 
 export const tab = {
-  idle: `${tabLayout} border-slate-300 bg-white text-slate-800 hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-900 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:border-cyan-400/50 dark:hover:bg-cyan-400/10 dark:hover:text-cyan-200`,
-  active: `${tabLayout} border-cyan-500 bg-cyan-100 text-cyan-950 dark:border-cyan-400/60 dark:bg-cyan-400/15 dark:text-cyan-100`,
+  list: "grid w-full max-w-md grid-cols-2 gap-1 rounded-xl border border-slate-300 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-900/40",
+  idle: `${tabLayout} text-slate-700 hover:bg-white/70 hover:text-cyan-900 dark:text-slate-300 dark:hover:bg-cyan-400/10 dark:hover:text-cyan-200`,
+  active: `${tabLayout} bg-white text-cyan-900 shadow-sm ring-1 ring-cyan-500/50 dark:bg-cyan-400/15 dark:text-cyan-100 dark:ring-cyan-400/50`,
 } as const;
 
 const choiceLayout =
